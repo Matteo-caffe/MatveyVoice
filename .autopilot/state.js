@@ -1,7 +1,7 @@
 window.STATE =
 {
   "slug": "matveyvoice-dictation",
-  "dir": "2026-09-20-matveyvoice-dictation--wip",
+  "dir": "2026-09-20-matveyvoice-dictation",
   "title": "MatveyVoice — диктовка голосом в любом приложении macOS",
   "mode": "semi",
   "depth": "normal",
@@ -11,8 +11,8 @@ window.STATE =
   "memoryFile": "CLAUDE.md",
   "skillDir": "/Users/matvejsuskov/MatveyVoice/.claude/skills/autopilot",
   "startedAt": "2026-09-20T18:52:00+03:00",
-  "updatedAt": "2026-09-20T20:34:04+03:00",
-  "finishedAt": null,
+  "updatedAt": "2026-09-20T20:37:08+03:00",
+  "finishedAt": "2026-09-20T20:37:08+03:00",
   "stages": [
     {
       "id": "preflight",
@@ -61,17 +61,18 @@ window.STATE =
     },
     {
       "id": "final",
-      "status": "active",
-      "startedAt": "2026-09-20T20:34:04+03:00"
+      "status": "done",
+      "startedAt": "2026-09-20T20:34:04+03:00",
+      "finishedAt": "2026-09-20T20:37:08+03:00"
     }
   ],
   "requirements": {
     "total": 13,
-    "done": 0,
-    "inTicket": 13,
+    "done": 11,
+    "inTicket": 0,
     "inSpec": 0,
-    "placeholder": 0,
-    "deferred": 0,
+    "placeholder": 1,
+    "deferred": 1,
     "dropped": 0
   },
   "tickets": [
@@ -345,5 +346,13 @@ window.STATE =
     "manifestSpec": "a17d0b82dc95984c4",
     "craft": "a6aaa7728fd5a09e9"
   },
-  "blind": null
+  "blind": {
+    "drift": [],
+    "unverified": [
+      "Живая диктовка (микрофон, разрешения, вставка в Telegram/WhatsApp/Safari/нейросети) не запускалась",
+      "Модель Whisper не скачивалась и не гонялась в приложении (small проверена вручную исполнителем таска 02 на синтезированной речи)",
+      "Ни одно окно (меню, плашка, настройки, чек-лист) не осмотрено глазами"
+    ],
+    "note": "Слепая проверка: сборка и запуск проходят, 72 теста зелёные; расхождений с манифестом нет, но R02–R05, R03, R12i отмечены как «частично/не проверено» из-за невозможности живого прогона"
+  }
 }

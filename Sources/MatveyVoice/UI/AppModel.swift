@@ -26,9 +26,6 @@ final class AppModel {
     var switchProgress: ModelState?
     var hotkeyAvailable = false
     var launchAtLoginError: String?
-    var setupCompleted: Bool {
-        didSet { UserDefaults.standard.set(setupCompleted, forKey: "setupCompleted") }
-    }
 
     init() {
         controller = DictationController(
@@ -36,7 +33,6 @@ final class AppModel {
             postProcess: { TextPostProcessor.process($0, removeFillers: $1) }
         )
         permissionsStatus = permissions.status
-        setupCompleted = UserDefaults.standard.bool(forKey: "setupCompleted")
         lastHotkey = settings.hotkey
         lastModelID = settings.modelID
     }
@@ -110,8 +106,8 @@ final class AppModel {
         } else if hotkeyAvailable != monitor.isAvailable {
             hotkeyAvailable = monitor.isAvailable
         }
-        if StatusLogic.isSetupComplete(permissions: permissionsStatus, model: modelState), !setupCompleted {
-            setupCompleted = true
+        if StatusLogic.isSetupComplete(permissions: permissionsStatus, model: modelState), !settings.setupCompleted {
+            settings.setupCompleted = true
         }
     }
 

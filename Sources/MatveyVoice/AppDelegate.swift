@@ -40,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         model.start()
 
-        if StatusLogic.needsChecklist(setupCompleted: model.setupCompleted, permissions: model.permissionsStatus) {
+        if StatusLogic.needsChecklist(setupCompleted: model.settings.setupCompleted, permissions: model.permissionsStatus) {
             checklistWindow?.show()
             if model.permissionsStatus.microphone == .notDetermined {
                 Task { await model.permissions.request(.microphone) }

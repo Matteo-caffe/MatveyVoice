@@ -27,18 +27,8 @@ public enum TranscriptionErrorDescriber {
     }
 
     static func string(_ key: String) -> String {
-        Bundle.main.localizedString(forKey: key, value: fallback[key], table: "Transcription")
+        String(localized: String.LocalizationValue(key), table: "Transcription", bundle: .main)
     }
-
-    private static let fallback: [String: String] = [
-        "error.noNetwork": "No internet connection. Connect and try again.",
-        "error.connectionLost": "The download was interrupted. Check your connection and try again.",
-        "error.noSpace": "Not enough free disk space for the model.",
-        "error.cancelled": "The download was cancelled.",
-        "error.generic": "Could not prepare the speech model. Try again.",
-        "error.unknownModel": "Unknown speech model.",
-        "error.notReady": "The speech model is not ready yet.",
-    ]
 }
 
 public enum TranscriberError: LocalizedError, Equatable {

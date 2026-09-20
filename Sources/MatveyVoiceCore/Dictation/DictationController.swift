@@ -6,6 +6,9 @@ import Observation
 @MainActor
 @Observable
 public final class DictationController {
+    /// Запись короче этого порога считается случайным нажатием; той же величиной пользуется плашка.
+    public nonisolated static let minimumRecordingDuration: TimeInterval = 0.3
+
     public private(set) var state: DictationState = .idle
     /// Последний результат, только в памяти.
     public private(set) var lastResult: String?
@@ -37,8 +40,8 @@ public final class DictationController {
         sleep: @escaping @Sendable (TimeInterval) async -> Void = { seconds in
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
         },
-        minimumDuration: TimeInterval = 0.3,
-        maximumDuration: TimeInterval = 300,
+        minimumDuration: TimeInterval = DictationController.minimumRecordingDuration,
+        maximumDuration: TimeInterval = AudioRecorder.maxDuration,
         messageDuration: TimeInterval = 3
     ) {
         self.settings = settings

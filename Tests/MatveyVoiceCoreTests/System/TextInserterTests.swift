@@ -40,4 +40,51 @@ private final class PB: @unchecked Sendable { let pb: NSPasteboard; init(_ p: NS
         #expect(pb.string(forType: .string) == "old text")
         #expect(pb.data(forType: NSPasteboard.PasteboardType("com.example.custom")) == Data([1, 2, 3]))
     }
+
+    @Test func dictatedTextIsMarkedTransientAndConcealedOnlyWhileOnPasteboard() async throws {
+        let pb = makePasteboard()
+        let box = PB(pb)
+        let during = Marks()
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, sendPaste: {
+            let types = box.pb.types ?? []
+            during.transient = types.contains(NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
+            during.concealed = types.contains(NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
+        }, restoreDelay: .milliseconds(1))
+        #expect(TextInserter.transientType.rawValue == "org.nspasteboard.TransientType")
+        #expect(TextInserter.concealedType.rawValue == "org.nspasteboard.ConcealedType")
+        _ = try await ins.insert("secret")
+        #expect(during.transient && during.concealed)
+        let after = pb.types ?? []
+        #expect(!after.contains(NSPasteboard.PasteboardType("org.nspasteboard.TransientType")))
+        #expect(!after.contains(NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")))
+    }
+
+    @Test func copiedOnlyKeepsTextWithoutMarks() async throws {
+        let pb = makePasteboard()
+        let ins = TextInserter(pasteboard: pb, isTrusted: { false }, sendPaste: {}, restoreDelay: .milliseconds(1))
+        _ = try await ins.insert("keep me")
+        #expect(pb.string(forType: .string) == "keep me")
+        let types = pb.types ?? []
+        #expect(!types.contains(NSPasteboard.PasteboardType("org.nspasteboard.TransientType")))
+        #expect(!types.contains(NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")))
+    }
+
+    @Test func cancellationDoesNotRestoreBeforeTheDelay() async throws {
+        let pb = makePasteboard()
+        pb.setString("old", forType: .string)
+        let box = PB(pb)
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, sendPaste: {}, restoreDelay: .milliseconds(300))
+        let started = ContinuousClock.now
+        let task = Task { try await ins.insert("new") }
+        try await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+        try await Task.sleep(for: .milliseconds(60))
+        // still inside the delay: our text must remain for the target app to read
+        #expect(box.pb.string(forType: .string) == "new")
+        _ = try await task.value
+        #expect(ContinuousClock.now - started >= .milliseconds(280))
+        #expect(pb.string(forType: .string) == "old")
+    }
 }
+
+private final class Marks: @unchecked Sendable { var transient = false; var concealed = false }

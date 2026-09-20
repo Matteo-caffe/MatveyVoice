@@ -22,6 +22,14 @@ struct AppSettingsTests {
         #expect(s.dictionary.isEmpty)
     }
 
+    @Test func setupCompletedDefaultsFalseAndPersists() {
+        let d = freshDefaults()
+        let a = AppSettings(defaults: d)
+        #expect(a.setupCompleted == false)
+        a.setupCompleted = true
+        #expect(AppSettings(defaults: d).setupCompleted == true)
+    }
+
     @Test func valuesSurviveRestart() {
         let d = freshDefaults()
         let a = AppSettings(defaults: d)

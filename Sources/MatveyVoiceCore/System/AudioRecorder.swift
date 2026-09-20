@@ -11,20 +11,13 @@ public enum AudioRecorderError: Error, Sendable {
 public final class AudioRecorder: AudioRecording, @unchecked Sendable {
     public static let maxDuration: TimeInterval = 300
 
-    /// Called once when the 5 minute limit stops the recording by itself.
-    /// Invoked on an audio thread; hop to the main actor if needed.
-    public var onLimitReached: (@Sendable () -> Void)? {
-        get { lock.lock(); defer { lock.unlock() }; return _onLimit }
-        set { lock.lock(); _onLimit = newValue; lock.unlock() }
-    }
-
+    /// The 5 minute limit is enforced by DictationController, which stops the recording;
+    /// the buffer here just never grows past it.
     private let lock = NSLock()
-    private var _onLimit: (@Sendable () -> Void)?
     private var engine: AVAudioEngine?
     private var buffer = SampleBuffer(maxSamples: Int(AudioRecorder.maxDuration * AudioResampler.targetRate))
     private var continuation: AsyncStream<Float>.Continuation?
     private var _levels: AsyncStream<Float>
-    private var limitFired = false
     private var resampler: AudioResampler?
 
     public init() {
@@ -43,7 +36,6 @@ public final class AudioRecorder: AudioRecording, @unchecked Sendable {
         lock.lock()
         if engine != nil { lock.unlock(); throw AudioRecorderError.alreadyRecording }
         buffer = SampleBuffer(maxSamples: Int(Self.maxDuration * AudioResampler.targetRate))
-        limitFired = false
         lock.unlock()
 
         let engine = AVAudioEngine()
@@ -98,26 +90,9 @@ public final class AudioRecorder: AudioRecording, @unchecked Sendable {
         let level = min(max((db + 50) / 50, 0), 1)
 
         lock.lock()
-        let full = buffer.append(samples)
-        let fire = full && !limitFired
-        if fire { limitFired = true }
+        buffer.append(samples)
         let cont = continuation
-        let callback = _onLimit
-        let engineToStop = fire ? engine : nil
         lock.unlock()
-
         cont?.yield(level)
-        if fire {
-            // Stop capturing; stop() later still returns what was recorded.
-            DispatchQueue.global().async { [weak self] in
-                guard let self else { return }
-                self.lock.lock()
-                let e = self.engine
-                self.engine = nil
-                self.lock.unlock()
-                self.halt(e ?? engineToStop)
-                callback?()
-            }
-        }
     }
 }

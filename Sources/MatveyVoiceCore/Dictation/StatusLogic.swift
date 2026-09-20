@@ -1,8 +1,7 @@
 import Foundation
-import MatveyVoiceCore
 
 /// Что показывать в меню и иконке. Чистая логика без AppKit.
-enum MenuStatus: Equatable {
+public enum MenuStatus: Equatable, Sendable {
     case ready
     case recording
     case processing
@@ -15,7 +14,7 @@ enum MenuStatus: Equatable {
     case modelFailed(String)
 
     /// Диктовка сейчас не сработает: есть что чинить.
-    var isProblem: Bool {
+    public var isProblem: Bool {
         switch self {
         case .noMicrophone, .needAccessibility, .modelMissing, .modelDownloading, .modelPreparing, .modelFailed: true
         default: false
@@ -23,8 +22,8 @@ enum MenuStatus: Equatable {
     }
 }
 
-enum StatusLogic {
-    static func menuStatus(dictation: DictationState, permissions: PermissionsStatus,
+public enum StatusLogic {
+    public static func menuStatus(dictation: DictationState, permissions: PermissionsStatus,
                            hotkeyAvailable: Bool, model: ModelState) -> MenuStatus {
         switch dictation {
         case .recording: return .recording
@@ -45,20 +44,20 @@ enum StatusLogic {
         return .ready
     }
 
-    static func permissionsGranted(_ p: PermissionsStatus) -> Bool {
+    public static func permissionsGranted(_ p: PermissionsStatus) -> Bool {
         p.microphone == .granted && p.accessibility == .granted
     }
 
-    static func isSetupComplete(permissions: PermissionsStatus, model: ModelState) -> Bool {
+    public static func isSetupComplete(permissions: PermissionsStatus, model: ModelState) -> Bool {
         permissionsGranted(permissions) && model == .ready
     }
 
     /// Чек-лист при запуске: пока установка ни разу не была завершена, или если разрешения не выданы.
-    static func needsChecklist(setupCompleted: Bool, permissions: PermissionsStatus) -> Bool {
+    public static func needsChecklist(setupCompleted: Bool, permissions: PermissionsStatus) -> Bool {
         !setupCompleted || !permissionsGranted(permissions)
     }
 
-    static func downloadedMegabytes(progress: Double, totalMegabytes: Int) -> Int {
+    public static func downloadedMegabytes(progress: Double, totalMegabytes: Int) -> Int {
         Int((min(max(progress, 0), 1) * Double(totalMegabytes)).rounded())
     }
 }

@@ -13,9 +13,10 @@ import Foundation
         let offline = TranscriptionErrorDescriber.reason(for: URLError(.notConnectedToInternet))
         let dropped = TranscriptionErrorDescriber.reason(for: URLError(.networkConnectionLost))
         let space = TranscriptionErrorDescriber.reason(for: CocoaError(.fileWriteOutOfSpace))
-        #expect(offline.localizedCaseInsensitiveContains("internet"))
-        #expect(dropped.localizedCaseInsensitiveContains("interrupted"))
-        #expect(space.localizedCaseInsensitiveContains("space"))
+        // Вне приложения таблица недоступна, и String(localized:) возвращает ключ.
+        #expect(offline == "error.noNetwork")
+        #expect(dropped == "error.connectionLost")
+        #expect(space == "error.noSpace")
         #expect(Set([offline, dropped, space]).count == 3)
     }
 }

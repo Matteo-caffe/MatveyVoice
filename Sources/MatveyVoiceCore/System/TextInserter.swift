@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import ApplicationServices
+import Carbon.HIToolbox
 
 /// Pastes text into the frontmost app: pasteboard + synthetic Cmd+V, then restores the pasteboard.
 public final class TextInserter: TextInserting, @unchecked Sendable {
@@ -21,6 +22,7 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
 
     public func insert(_ text: String) async throws -> InsertResult {
         guard isTrusted() else {
+            // Пользователь сам вставит текст: пометка «временный» не нужна, но и прежнее не восстанавливаем.
             pasteboard.clearContents()
             pasteboard.setString(text, forType: .string)
             return .copiedOnly(reason: String(localized: "insert.noAccess", table: "System", bundle: .main))
@@ -28,15 +30,24 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
         let saved = Self.snapshot(pasteboard)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        // Менеджеры буфера обмена (nspasteboard.org) не должны сохранять текст диктовки.
+        pasteboard.setData(Data(), forType: Self.transientType)
+        pasteboard.setData(Data(), forType: Self.concealedType)
         let ourChange = pasteboard.changeCount
         sendPaste()
-        try? await Task.sleep(for: restoreDelay)
+        // Отмена вызывающей задачи не должна приводить к немедленному восстановлению:
+        // приложение-получатель ещё может читать буфер. Ждём в отдельной задаче.
+        let delay = restoreDelay
+        await Task.detached { try? await Task.sleep(for: delay) }.value
         // Restore only if nobody else wrote to the pasteboard meanwhile.
         if pasteboard.changeCount == ourChange {
             Self.restore(saved, to: pasteboard)
         }
         return .inserted
     }
+
+    public static let transientType = NSPasteboard.PasteboardType("org.nspasteboard.TransientType")
+    public static let concealedType = NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")
 
     /// Every item with every type it carries.
     static func snapshot(_ pb: NSPasteboard) -> [[(NSPasteboard.PasteboardType, Data)]] {
@@ -59,11 +70,48 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
     /// Cmd+V only; never Return.
     @Sendable public static func postCommandV() {
         let src = CGEventSource(stateID: .combinedSessionState)
-        let vKey: CGKeyCode = 9
+        let vKey = cachedKeyCodeForV()
         for down in [true, false] {
             let e = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: down)
             e?.flags = .maskCommand
             e?.post(tap: .cgAnnotatedSessionEventTap)
+        }
+    }
+}
+
+private let vKeyLock = NSLock()
+nonisolated(unsafe) private var vKeyCache: CGKeyCode?
+
+extension TextInserter {
+    /// TIS-вызовы допустимы только на главном потоке: определяем код один раз там и кешируем.
+    static func cachedKeyCodeForV() -> CGKeyCode {
+        vKeyLock.lock(); let cached = vKeyCache; vKeyLock.unlock()
+        if let cached { return cached }
+        let code: CGKeyCode = Thread.isMainThread ? keyCodeForV() : DispatchQueue.main.sync { keyCodeForV() }
+        vKeyLock.lock(); vKeyCache = code; vKeyLock.unlock()
+        return code
+    }
+}
+
+extension TextInserter {
+    /// Код клавиши «V» в текущей раскладке (Dvorak, AZERTY и т. д.); запасной путь — 9 (ANSI QWERTY).
+    static func keyCodeForV() -> CGKeyCode {
+        let fallback: CGKeyCode = 9
+        guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let ptr = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return fallback }
+        let layoutData = Unmanaged<CFData>.fromOpaque(ptr).takeUnretainedValue()
+        guard let bytes = CFDataGetBytePtr(layoutData) else { return fallback }
+        return bytes.withMemoryRebound(to: UCKeyboardLayout.self, capacity: 1) { layout in
+            for code in 0..<UInt16(128) {
+                var dead: UInt32 = 0
+                var length = 0
+                var chars = [UniChar](repeating: 0, count: 4)
+                let status = UCKeyTranslate(layout, code, UInt16(kUCKeyActionDown), 0,
+                                            UInt32(LMGetKbdType()), OptionBits(kUCKeyTranslateNoDeadKeysBit),
+                                            &dead, chars.count, &length, &chars)
+                if status == noErr, length == 1, chars[0] == UniChar(UInt8(ascii: "v")) { return CGKeyCode(code) }
+            }
+            return fallback
         }
     }
 }

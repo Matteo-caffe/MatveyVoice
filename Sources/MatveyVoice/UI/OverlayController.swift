@@ -20,7 +20,7 @@ private final class NonActivatingPanel: NSPanel {
 @MainActor
 final class OverlayController {
     /// Записи короче этого порога плашку не показывают (контроллер их всё равно отбрасывает).
-    static let recordingDelay: Duration = .milliseconds(300)
+    static let recordingDelay: Duration = .seconds(DictationController.minimumRecordingDuration)
 
     private let controller: DictationController
     private let model = OverlayModel()

@@ -16,6 +16,9 @@ public final class AppSettings {
     public var removeFillers: Bool { didSet { defaults.set(removeFillers, forKey: Key.removeFillers) } }
     public var launchAtLogin: Bool { didSet { defaults.set(launchAtLogin, forKey: Key.launchAtLogin) } }
 
+    /// Первичная настройка (разрешения и модель) хотя бы раз была завершена.
+    public var setupCompleted: Bool { didSet { defaults.set(setupCompleted, forKey: Key.setupCompleted) } }
+
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         hotkey = defaults.string(forKey: Key.hotkey).flatMap(Hotkey.init(rawValue:)) ?? .rightOption
@@ -24,6 +27,7 @@ public final class AppSettings {
         modelID = defaults.string(forKey: Key.modelID) ?? Self.defaultModelID
         dictionary = defaults.stringArray(forKey: Key.dictionary) ?? []
         removeFillers = defaults.object(forKey: Key.removeFillers) as? Bool ?? true
+        setupCompleted = defaults.bool(forKey: Key.setupCompleted)
         launchAtLogin = defaults.object(forKey: Key.launchAtLogin) as? Bool ?? false
     }
 
@@ -35,5 +39,6 @@ public final class AppSettings {
         static let dictionary = "dictionary"
         static let removeFillers = "removeFillers"
         static let launchAtLogin = "launchAtLogin"
+        static let setupCompleted = "setupCompleted"
     }
 }

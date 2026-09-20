@@ -1,0 +1,10 @@
+"message.modelNotInstalled" = "The model is not installed yet";
+"message.modelDownloading" = "The model is still downloading";
+"message.modelPreparing" = "The model is getting ready";
+"message.modelFailed %@" = "Model error: %@";
+"message.recordFailed %@" = "Could not start recording: %@";
+"message.recognitionFailed %@" = "Recognition failed: %@";
+"message.noSpeech" = "Didn't catch that";
+"message.needAccess" = "Access needed";
+"message.insertFailed %@" = "Could not insert text: %@";
+"message.recordingLimit" = "Recording limit reached — transcribing what was captured";

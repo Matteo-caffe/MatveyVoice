@@ -1,0 +1,10 @@
+"message.modelNotInstalled" = "Модель ещё не установлена";
+"message.modelDownloading" = "Модель ещё скачивается";
+"message.modelPreparing" = "Модель готовится";
+"message.modelFailed %@" = "Ошибка модели: %@";
+"message.recordFailed %@" = "Не удалось начать запись: %@";
+"message.recognitionFailed %@" = "Не удалось распознать: %@";
+"message.noSpeech" = "Не расслышал";
+"message.needAccess" = "Нужен доступ";
+"message.insertFailed %@" = "Не удалось вставить текст: %@";
+"message.recordingLimit" = "Достигнут лимит записи — распознаю то, что успел";

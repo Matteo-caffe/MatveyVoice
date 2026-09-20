@@ -16,9 +16,9 @@
 
 ### Из .dmg
 
-1. Скачайте `MatveyVoice.dmg` на странице [Releases](https://github.com/[GITHUB-USER]/MatveyVoice/releases).
+1. Скачайте `MatveyVoice.dmg` на странице [Releases](https://github.com/Matteo-caffe/MatveyVoice/releases).
 2. Откройте образ и перетащите MatveyVoice на ярлык «Программы».
-3. Первый запуск заблокирует Gatekeeper, потому что приложение не нотаризовано. Нажмите правой кнопкой по приложению и выберите «Открыть», либо выполните:
+3. Первый запуск заблокирует Gatekeeper, потому что приложение не нотаризовано. На macOS 15 и новее один раз попробуйте открыть приложение, затем зайдите в Системные настройки > Конфиденциальность и безопасность, прокрутите вниз до сообщения про MatveyVoice и нажмите «Всё равно открыть». На macOS 14 нажмите правой кнопкой по приложению и выберите «Открыть». На любой версии можно и так:
 
    ```
    xattr -dr com.apple.quarantine /Applications/MatveyVoice.app
@@ -29,7 +29,7 @@
 Нужен Swift (достаточно Command Line Tools, Xcode не нужен).
 
 ```
-git clone https://github.com/[GITHUB-USER]/MatveyVoice.git
+git clone https://github.com/Matteo-caffe/MatveyVoice.git
 cd MatveyVoice
 scripts/build-app.sh      # собирает build/MatveyVoice.app (arm64)
 scripts/make-dmg.sh       # по желанию: build/MatveyVoice.dmg
@@ -81,4 +81,4 @@ MatveyVoice живёт в строке меню. При первом запус�
 
 ## Лицензия
 
-MIT, см. [LICENSE](LICENSE). Copyright (c) 2026 [COPYRIGHT-HOLDER].
+MIT, см. [LICENSE](LICENSE). Copyright (c) 2026 MatveyVoice contributors.

@@ -16,9 +16,9 @@ Inspired by the idea of Aqua Voice. MatveyVoice is an independent project: it is
 
 ### From the .dmg
 
-1. Download `MatveyVoice.dmg` from the [Releases](https://github.com/[GITHUB-USER]/MatveyVoice/releases) page.
+1. Download `MatveyVoice.dmg` from the [Releases](https://github.com/Matteo-caffe/MatveyVoice/releases) page.
 2. Open it and drag MatveyVoice onto the Applications shortcut.
-3. The first launch is blocked by Gatekeeper because the app is not notarized. Either right-click the app and choose "Open", or run:
+3. The first launch is blocked by Gatekeeper because the app is not notarized. On macOS 15 or newer, try to open the app once, then go to System Settings > Privacy & Security, scroll down to the message about MatveyVoice and click "Open Anyway". On macOS 14, right-click the app and choose "Open". Or, on any version, run:
 
    ```
    xattr -dr com.apple.quarantine /Applications/MatveyVoice.app
@@ -29,7 +29,7 @@ Inspired by the idea of Aqua Voice. MatveyVoice is an independent project: it is
 You need the Swift toolchain (Command Line Tools are enough; Xcode is not required).
 
 ```
-git clone https://github.com/[GITHUB-USER]/MatveyVoice.git
+git clone https://github.com/Matteo-caffe/MatveyVoice.git
 cd MatveyVoice
 scripts/build-app.sh      # builds build/MatveyVoice.app (arm64)
 scripts/make-dmg.sh       # optional: builds build/MatveyVoice.dmg
@@ -81,4 +81,4 @@ See [docs/manual-checklist.md](docs/manual-checklist.md).
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Copyright (c) 2026 [COPYRIGHT-HOLDER].
+MIT, see [LICENSE](LICENSE). Copyright (c) 2026 MatveyVoice contributors.

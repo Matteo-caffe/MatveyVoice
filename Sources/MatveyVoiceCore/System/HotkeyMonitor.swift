@@ -1,0 +1,96 @@
+import Foundation
+import CoreGraphics
+import ApplicationServices
+
+/// Watches one modifier key through a pass-through CGEventTap (needs Accessibility only).
+public final class HotkeyMonitor: @unchecked Sendable {
+    private let lock = NSLock()
+    private var tap: CFMachPort?
+    private var source: CFRunLoopSource?
+    private var machine = HotkeyStateMachine()
+    private var hotkey: Hotkey = .rightOption
+    private var onPress: (() -> Void)?
+    private var onRelease: (() -> Void)?
+    private var onCancel: (() -> Void)?
+
+    public init() {}
+
+    /// True while the tap is installed and enabled.
+    public var isAvailable: Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard let tap else { return false }
+        return CGEvent.tapIsEnabled(tap: tap)
+    }
+
+    public func start(hotkey: Hotkey,
+                      onPress: @escaping () -> Void,
+                      onRelease: @escaping () -> Void,
+                      onCancel: @escaping () -> Void) {
+        stop()
+        lock.lock()
+        self.hotkey = hotkey
+        self.onPress = onPress
+        self.onRelease = onRelease
+        self.onCancel = onCancel
+        machine = HotkeyStateMachine()
+        lock.unlock()
+
+        let mask: CGEventMask = (1 << CGEventType.flagsChanged.rawValue) | (1 << CGEventType.keyDown.rawValue)
+        let callback: CGEventTapCallBack = { _, type, event, refcon in
+            guard let refcon else { return Unmanaged.passUnretained(event) }
+            let monitor = Unmanaged<HotkeyMonitor>.fromOpaque(refcon).takeUnretainedValue()
+            monitor.handle(type: type, event: event)
+            return Unmanaged.passUnretained(event)
+        }
+        // Active (not listen-only) tap: only Accessibility is required, no Input Monitoring.
+        guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
+                                          options: .defaultTap, eventsOfInterest: mask,
+                                          callback: callback,
+                                          userInfo: Unmanaged.passUnretained(self).toOpaque()) else { return }
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        lock.lock()
+        self.tap = tap
+        self.source = source
+        lock.unlock()
+    }
+
+    public func stop() {
+        lock.lock()
+        let tap = self.tap, source = self.source
+        self.tap = nil; self.source = nil
+        onPress = nil; onRelease = nil; onCancel = nil
+        lock.unlock()
+        if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
+        if let tap { CGEvent.tapEnable(tap: tap, enable: false); CFMachPortInvalidate(tap) }
+    }
+
+    private func handle(type: CGEventType, event: CGEvent) {
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            lock.lock(); let tap = self.tap; lock.unlock()
+            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            return
+        }
+        let kind: HotkeyClassifier.Kind = switch type {
+        case .flagsChanged: .flagsChanged
+        case .keyDown: .keyDown
+        default: .other
+        }
+        lock.lock()
+        let output: HotkeyOutput?
+        let (press, release, cancel) = (onPress, onRelease, onCancel)
+        if let ev = HotkeyClassifier.classify(kind: kind,
+                                              keyCode: event.getIntegerValueField(.keyboardEventKeycode),
+                                              flags: event.flags.rawValue, hotkey: hotkey) {
+            output = machine.handle(ev)
+        } else { output = nil }
+        lock.unlock()
+        switch output {
+        case .press: press?()
+        case .release: release?()
+        case .cancel: cancel?()
+        case nil: break
+        }
+    }
+}

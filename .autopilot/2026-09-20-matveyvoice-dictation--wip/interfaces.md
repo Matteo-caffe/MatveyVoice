@@ -41,3 +41,42 @@
 - `AppSettings` — `@MainActor @Observable final class`, `init(defaults: UserDefaults = .standard)`; поля `hotkey, triggerMode, language, modelID, dictionary, removeFillers, launchAtLogin`; `static defaultModelID = "large-v3-turbo"`.
 - Строки: таблица `UI`, ключ `menu.quit`; `Resources/{en,ru}.lproj/`. Info.plist — `Resources/Info.plist`.
 - Папки `Transcription/`, `System/`, `Dictation/` содержат файлы-заглушки `_*Zone.swift` — их владелец таска вправе удалить.
+
+### Из таска 04 — сценарий диктовки
+
+- `@MainActor @Observable public final class DictationController`; `init(settings: AppSettings, recorder: any AudioRecording, transcriber: any Transcribing, inserter: any TextInserting, postProcess: @Sendable (String, Bool) -> String = тождественная, sleep:, minimumDuration = 0.3, maximumDuration = 300, messageDuration = 3)`.
+- `state: DictationState`, `lastResult: String?`; `handlePress()`, `handleRelease()`, `handleCancel()`, `waitForCompletion() async`.
+- Подключение (таск 05): `postProcess: { TextPostProcessor.process($0, removeFillers: $1) }`. Язык, словарь, режим, removeFillers читаются из `AppSettings` в момент нажатия/окончания записи.
+- Строки: таблица `Dictation`, ключи `message.*` (modelNotInstalled, modelDownloading, modelPreparing, modelFailed, recordFailed, recognitionFailed, noSpeech, needAccess, insertFailed).
+- Лимит записи 300 с держит сам контроллер (у `AudioRecording` нет колбэка о лимите). Нажатие/отмена во время transcribing/inserting игнорируются. Пустой текст после постобработки = тишина.
+
+### Из таска 03 — система
+
+- `HotkeyMonitor` (final, @unchecked Sendable): `init()`; `start(hotkey:onPress:onRelease:onCancel:)` (замыкания `@escaping () -> Void`, приходят на главном run loop); `stop()`; `isAvailable: Bool`. Слежение — активный CGEventTap, нужен только «Универсальный доступ» (Мониторинг ввода не запрашивается). Если доступа нет при `start`, слежение молча не поднимается — таск 05 перезапускает `start` по `Permissions.changes`.
+- `HotkeyStateMachine` (struct, чистая) `handle(_ HotkeyEvent) -> HotkeyOutput?`; `HotkeyClassifier.classify(kind:keyCode:flags:hotkey:)`.
+- `AudioRecorder: AudioRecording`; `init()`; `static maxDuration = 300`; `onLimitReached: (@Sendable () -> Void)?` — сейчас нигде не подключён (лимит держит DictationController).
+- `TextInserter: TextInserting`; `init(pasteboard:isTrusted:sendPaste:restoreDelay:)`, в приложении `TextInserter()`; буфер возвращается через 250 мс, если его не меняли.
+- `Permissions: PermissionsProviding`; `init()`; `changes` — опрос раз в секунду. Универсальный доступ отдаётся как `.notDetermined` или `.granted` (`.denied` не бывает).
+- Строки: таблица `System`, ключ `insert.noAccess`.
+
+### Из таска 02 — распознавание
+
+- `WhisperTranscriber: Transcribing` (@unchecked Sendable): `init(downloadBase: URL? = nil)`; `static defaultDownloadBase` = `~/Library/Application Support/MatveyVoice/Models`; `state`, `prepare(modelID:) async`, `cancelPrepare()`, `transcribe(_:language:hints:) async throws -> Transcription?`.
+- `TextPostProcessor.process(_ text: String, removeFillers: Bool) -> String`.
+- `ModelCatalog`: `entries`, `entry(for:)`, `whisperKitVariant(for:)`; small = `openai_whisper-small` (~250 МБ), large-v3-turbo = `openai_whisper-large-v3-v20240930_turbo` (~630 МБ).
+- `SpeechFilter.isSilent([Float])`, `SpeechFilter.isHallucination(String)`; `TranscriptionErrorDescriber.reason(for:)`; строки — таблица `Transcription`.
+- Автоопределение языка ограничено ru/en. WhisperKit при первой загрузке сам тянет токенизатор с Hugging Face (тот же единственный сетевой канал).
+
+### Тест-команда (важно)
+
+На этой машине `swift test` без флага не собирает Swift Testing: «plugin for module TestingMacros not found». Рабочая команда: `swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing`. Не менять ничего в системе.
+
+### Правка таска 02 (после ревью)
+
+- `WhisperTranscriber.switchProgress: ModelState?` — загрузка другой модели при уже рабочей: пока она идёт, `state` остаётся `.ready`, диктовка идёт на прежней; `nil`, если переключения нет. Не входит в протокол `Transcribing` — UI (таск 05) читает его на самом `WhisperTranscriber`. Если рабочей модели ещё нет, прогресс идёт в `state`.
+- `state` при запуске приложения — `.notInstalled`, пока не вызван `prepare(modelID:)`: таск 05 обязан вызвать `prepare` при старте.
+- `SpeechFilter.isHallucination` отбрасывает только полные известные фразы, известную подпись с именем ≤2 слов с заглавной, текст в скобках/♪ до 4 слов. `TranscriberError` — `LocalizedError`.
+
+### Из таска 06 — упаковка
+
+- `scripts/build-app.sh` (только arm64, подхватывает `Resources/AppIcon.icns`), `scripts/make-icon.sh`, `scripts/make-dmg.sh` → `build/MatveyVoice.dmg`, `docs/manual-checklist.md`. README.md/README.ru.md описывают возможности приложения — таск 05 реализует ровно их (первый запуск с чек-листом, выбор клавиши, режим, язык, модель, словарь, слова-паразиты, «Запускать при входе», «Скопировать последнюю диктовку»).

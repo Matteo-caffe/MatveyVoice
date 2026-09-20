@@ -11,7 +11,7 @@ window.STATE =
   "memoryFile": "CLAUDE.md",
   "skillDir": "/Users/matvejsuskov/MatveyVoice/.claude/skills/autopilot",
   "startedAt": "2026-09-20T18:52:00+03:00",
-  "updatedAt": "2026-09-20T19:03:02+03:00",
+  "updatedAt": "2026-09-20T19:39:05+03:00",
   "finishedAt": null,
   "stages": [
     {
@@ -48,11 +48,14 @@ window.STATE =
     {
       "id": "build",
       "status": "active",
-      "startedAt": "2026-09-20T19:02:30+03:00"
+      "startedAt": "2026-09-20T19:02:30+03:00",
+      "note": "5 из 6 тасков готовы"
     },
     {
       "id": "review",
-      "status": "pending"
+      "status": "active",
+      "startedAt": "2026-09-20T19:14:21+03:00",
+      "note": "проверено 5 из 6"
     },
     {
       "id": "final",
@@ -86,11 +89,24 @@ window.STATE =
         "Sources/MatveyVoiceCore/Settings/",
         "scripts/build-app.sh"
       ],
-      "status": "in-progress",
+      "status": "done",
       "retries": 0,
       "repairs": 0,
       "handoffs": 0,
-      "startedAt": "2026-09-20T19:03:02+03:00"
+      "startedAt": "2026-09-20T19:03:02+03:00",
+      "finishedAt": "2026-09-20T19:14:21+03:00",
+      "commit": "b621d7c",
+      "tests": {
+        "passed": 2,
+        "failed": 0
+      },
+      "files": [
+        "Package.swift",
+        "Sources/MatveyVoiceCore/Shared/",
+        "Sources/MatveyVoiceCore/Settings/",
+        "scripts/build-app.sh"
+      ],
+      "concerns": []
     },
     {
       "id": "02",
@@ -109,10 +125,20 @@ window.STATE =
       "zone": [
         "Sources/MatveyVoiceCore/Transcription/"
       ],
-      "status": "pending",
+      "status": "done",
       "retries": 0,
-      "repairs": 0,
-      "handoffs": 0
+      "repairs": 1,
+      "handoffs": 0,
+      "startedAt": "2026-09-20T19:14:21+03:00",
+      "tests": {
+        "passed": 23,
+        "failed": 0
+      },
+      "finishedAt": "2026-09-20T19:39:05+03:00",
+      "commit": "7ddcee3",
+      "repairFindings": [
+        "фильтр галлюцинаций резал настоящую речь; старая модель должна оставаться рабочей при смене"
+      ]
     },
     {
       "id": "03",
@@ -129,10 +155,17 @@ window.STATE =
       "zone": [
         "Sources/MatveyVoiceCore/System/"
       ],
-      "status": "pending",
+      "status": "done",
       "retries": 0,
       "repairs": 0,
-      "handoffs": 0
+      "handoffs": 0,
+      "startedAt": "2026-09-20T19:14:21+03:00",
+      "finishedAt": "2026-09-20T19:33:17+03:00",
+      "commit": "4ab9d66",
+      "tests": {
+        "passed": 13,
+        "failed": 0
+      }
     },
     {
       "id": "04",
@@ -149,10 +182,20 @@ window.STATE =
       "zone": [
         "Sources/MatveyVoiceCore/Dictation/"
       ],
-      "status": "pending",
+      "status": "done",
       "retries": 0,
-      "repairs": 0,
-      "handoffs": 0
+      "repairs": 1,
+      "handoffs": 0,
+      "startedAt": "2026-09-20T19:14:21+03:00",
+      "finishedAt": "2026-09-20T19:33:17+03:00",
+      "commit": "a30afa9",
+      "repairFindings": [
+        "R02.5: нет сообщения при остановке по лимиту; усилены тесты"
+      ],
+      "tests": {
+        "passed": 18,
+        "failed": 0
+      }
     },
     {
       "id": "05",
@@ -173,10 +216,11 @@ window.STATE =
       "zone": [
         "Sources/MatveyVoice/UI/"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "retries": 0,
       "repairs": 0,
-      "handoffs": 0
+      "handoffs": 0,
+      "startedAt": "2026-09-20T19:39:05+03:00"
     },
     {
       "id": "06",
@@ -197,14 +241,20 @@ window.STATE =
         "LICENSE",
         "docs/"
       ],
-      "status": "pending",
+      "status": "done",
       "retries": 0,
       "repairs": 0,
-      "handoffs": 0
+      "handoffs": 0,
+      "startedAt": "2026-09-20T19:33:17+03:00",
+      "finishedAt": "2026-09-20T19:39:05+03:00",
+      "commit": "1631f3f"
     }
   ],
   "singlePass": null,
-  "tests": null,
+  "tests": {
+    "passed": 49,
+    "failed": 0
+  },
   "debt": {
     "placeholders": [
       "[GITHUB-USER] и [COPYRIGHT-HOLDER] в README и LICENSE"
@@ -222,10 +272,28 @@ window.STATE =
     "findings": 1,
     "note": "R02: функции Aqua сверх диктовки (контекст экрана, голосовые команды, LLM-правка) вынесены в Вне рамок → deferred, попадёт в отчёт; остальное покрыто"
   },
-  "concerns": [],
+  "concerns": [
+    "Package.swift:11 — WhisperKit from 0.9.0, проверено на 0.18.0 (поднять нижнюю границу)",
+    "AppDelegate.swift:9 — при одновременном старте двух копий обе могут завершиться (R01.3)",
+    "Apple Silicon не закреплён в сборке (R01.1) — решить в таске 06 (только arm64)",
+    "AppDelegate.swift:22 — accessibilityDescription вне таблицы строк",
+    "AppSettingsTests — нет теста на неизвестный rawValue в UserDefaults",
+    "TextInserter.swift — текст диктовки не помечен как временный (ConcealedType/TransientType): менеджеры буфера сохранят его; возврат буфера по фиксированным 250 мс — медленное приложение получит старое содержимое",
+    "HotkeyStateMachine.swift:31 — триггер при уже зажатых других клавишах всё равно даёт press (R09i.2)",
+    "HotkeyMonitor.swift — нет deinit→stop(); при tapCreate==nil молча не поднимается (05 перезапускает по Permissions.changes)",
+    "AudioRecorder.swift — гонка колбэка лимита со stop()/start(); onLimitReached не подключён, лимит считается дважды (рекордер и таймер контроллера)",
+    "TextInserter.postCommandV — код клавиши V привязан к раскладке (Dvorak)",
+    "Permissions — accessibility не бывает .denied; UI должен одинаково говорить «не выдан/отозван»",
+    "Тесты DictationController видят ключи строк, а не переведённый текст (нет bundle в тестах)",
+    "Тест-команда на этой машине: swift test с -Xswiftc -plugin-path … (см. interfaces.md)",
+    "scripts/make-dmg.sh — собирает из уже существующей build/MatveyVoice.app, может быть устаревшей",
+    "build-app.sh — ключ значка дописывается PlistBuddy, без иконки сборка молча идёт без неё",
+    "SpeechFilter — список галлюцинаций короткий, составлен по памяти; пороги тишины подобраны на глаз",
+    "WhisperTranscriber — ветка switchProgress без автотеста, large-v3-turbo вручную не прогонялась"
+  ],
   "reviewers": {
-    "manifestSpec": null,
-    "craft": null
+    "manifestSpec": "a17d0b82dc95984c4",
+    "craft": "a6aaa7728fd5a09e9"
   },
   "blind": null
 }

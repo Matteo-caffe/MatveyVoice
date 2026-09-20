@@ -11,7 +11,7 @@ window.STATE =
   "memoryFile": "CLAUDE.md",
   "skillDir": "/Users/matvejsuskov/MatveyVoice/.claude/skills/autopilot",
   "startedAt": "2026-09-20T18:52:00+03:00",
-  "updatedAt": "2026-09-20T19:39:05+03:00",
+  "updatedAt": "2026-09-20T20:34:04+03:00",
   "finishedAt": null,
   "stages": [
     {
@@ -47,19 +47,22 @@ window.STATE =
     },
     {
       "id": "build",
-      "status": "active",
+      "status": "done",
       "startedAt": "2026-09-20T19:02:30+03:00",
-      "note": "5 из 6 тасков готовы"
+      "note": "7 из 7 тасков готовы",
+      "finishedAt": "2026-09-20T20:34:04+03:00"
     },
     {
       "id": "review",
-      "status": "active",
+      "status": "done",
       "startedAt": "2026-09-20T19:14:21+03:00",
-      "note": "проверено 5 из 6"
+      "note": "проверено 7 из 7",
+      "finishedAt": "2026-09-20T20:34:04+03:00"
     },
     {
       "id": "final",
-      "status": "pending"
+      "status": "active",
+      "startedAt": "2026-09-20T20:34:04+03:00"
     }
   ],
   "requirements": {
@@ -216,11 +219,20 @@ window.STATE =
       "zone": [
         "Sources/MatveyVoice/UI/"
       ],
-      "status": "in-progress",
+      "status": "done",
       "retries": 0,
-      "repairs": 0,
+      "repairs": 1,
       "handoffs": 0,
-      "startedAt": "2026-09-20T19:39:05+03:00"
+      "startedAt": "2026-09-20T19:39:05+03:00",
+      "finishedAt": "2026-09-20T20:20:20+03:00",
+      "commit": "6870b3e",
+      "repairFindings": [
+        "R04.4: после «Нужен доступ» не открывался раздел доступа; перезапуск монитора; троттлинг; toggle при отозванном микрофоне"
+      ],
+      "tests": {
+        "passed": 0,
+        "failed": 0
+      }
     },
     {
       "id": "06",
@@ -248,11 +260,49 @@ window.STATE =
       "startedAt": "2026-09-20T19:33:17+03:00",
       "finishedAt": "2026-09-20T19:39:05+03:00",
       "commit": "1631f3f"
+    },
+    {
+      "id": "07",
+      "title": "Закрытие отложенных замечаний: буфер, раскладка, клавиша, лимит, строки",
+      "requirements": [
+        "R04",
+        "R09i",
+        "R02.5",
+        "R01.5"
+      ],
+      "blockedBy": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05"
+      ],
+      "wave": 4,
+      "zone": [
+        "Sources/MatveyVoiceCore/System/",
+        "Sources/MatveyVoiceCore/Dictation/",
+        "Sources/MatveyVoice/UI/",
+        "Tests/"
+      ],
+      "status": "done",
+      "startedAt": "2026-09-20T20:21:07+03:00",
+      "retries": 0,
+      "repairs": 1,
+      "handoffs": 0,
+      "finishedAt": "2026-09-20T20:34:04+03:00",
+      "commit": "5125295",
+      "repairFindings": [
+        "залипание набора удерживаемых клавиш; TIS не на главном потоке; слабые тесты"
+      ],
+      "tests": {
+        "passed": 72,
+        "failed": 0
+      }
     }
   ],
   "singlePass": null,
   "tests": {
-    "passed": 49,
+    "passed": 72,
     "failed": 0
   },
   "debt": {
@@ -278,18 +328,18 @@ window.STATE =
     "Apple Silicon не закреплён в сборке (R01.1) — решить в таске 06 (только arm64)",
     "AppDelegate.swift:22 — accessibilityDescription вне таблицы строк",
     "AppSettingsTests — нет теста на неизвестный rawValue в UserDefaults",
-    "TextInserter.swift — текст диктовки не помечен как временный (ConcealedType/TransientType): менеджеры буфера сохранят его; возврат буфера по фиксированным 250 мс — медленное приложение получит старое содержимое",
-    "HotkeyStateMachine.swift:31 — триггер при уже зажатых других клавишах всё равно даёт press (R09i.2)",
-    "HotkeyMonitor.swift — нет deinit→stop(); при tapCreate==nil молча не поднимается (05 перезапускает по Permissions.changes)",
-    "AudioRecorder.swift — гонка колбэка лимита со stop()/start(); onLimitReached не подключён, лимит считается дважды (рекордер и таймер контроллера)",
-    "TextInserter.postCommandV — код клавиши V привязан к раскладке (Dvorak)",
     "Permissions — accessibility не бывает .denied; UI должен одинаково говорить «не выдан/отозван»",
     "Тесты DictationController видят ключи строк, а не переведённый текст (нет bundle в тестах)",
     "Тест-команда на этой машине: swift test с -Xswiftc -plugin-path … (см. interfaces.md)",
     "scripts/make-dmg.sh — собирает из уже существующей build/MatveyVoice.app, может быть устаревшей",
     "build-app.sh — ключ значка дописывается PlistBuddy, без иконки сборка молча идёт без неё",
     "SpeechFilter — список галлюцинаций короткий, составлен по памяти; пороги тишины подобраны на глаз",
-    "WhisperTranscriber — ветка switchProgress без автотеста, large-v3-turbo вручную не прогонялась"
+    "WhisperTranscriber — ветка switchProgress без автотеста, large-v3-turbo вручную не прогонялась",
+    "Визуально ни одно окно не осмотрено; ни один пункт docs/manual-checklist.md не пройден",
+    "SettingsView использует ObservableObject вместо @State (нет SwiftUIMacros в CLT)",
+    "⌘V: код клавиши кешируется навсегда, кеш не сбрасывается при смене раскладки (Dvorak/AZERTY не проверены)",
+    "HotkeyMonitor.handle: вычисление triggerHeld дублирует классификатор и не покрыто тестом; для fn с удерживаемыми клавишами теста нет",
+    "Тест локализации сверяет наборы ключей en/ru, но не что каждый используемый в коде ключ существует"
   ],
   "reviewers": {
     "manifestSpec": "a17d0b82dc95984c4",

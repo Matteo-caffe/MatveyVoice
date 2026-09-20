@@ -33,4 +33,11 @@
 
 ## Что построено
 
-_(пока ничего)_
+### Из таска 01 — каркас
+
+- Пакет `MatveyVoice`: цели `MatveyVoiceCore` (библиотека, зависит от WhisperKit 0.18.0), `MatveyVoice` (исполняемый), `MatveyVoiceCoreTests`. Swift 6 language mode, macOS 14+. Тесты: `swift test`, один — `swift test --filter <Имя>`. Сборка приложения: `scripts/build-app.sh` → `build/MatveyVoice.app`.
+- `Shared` (public, Sendable): `Hotkey{rightOption,rightCommand,rightControl,fn}`, `TriggerMode{hold,toggle}`, `Language{auto,ru,en}`, `RecordedAudio(samples,duration)`, `Transcription(text,detectedLanguage?)`, `ModelState{notInstalled,downloading(progress:),preparing,ready,failed(reason:)}`, `InsertResult{inserted,copiedOnly(reason:)}`, `PermissionKind{microphone,accessibility}`, `PermissionState{notDetermined,granted,denied}`, `PermissionsStatus(microphone,accessibility)`, `DictationState{idle,recording,transcribing,inserting,message(text:)}`.
+- Протоколы (AnyObject, Sendable): `AudioRecording{start() throws; stop()->RecordedAudio; levels: AsyncStream<Float>}`, `Transcribing{state; prepare(modelID:) async; transcribe(_:language:hints:) async throws -> Transcription?; cancelPrepare()}`, `TextInserting{insert(_:) async throws -> InsertResult}`, `PermissionsProviding{status; request(_:) async; openSettings(_:); changes: AsyncStream<PermissionsStatus>}`.
+- `AppSettings` — `@MainActor @Observable final class`, `init(defaults: UserDefaults = .standard)`; поля `hotkey, triggerMode, language, modelID, dictionary, removeFillers, launchAtLogin`; `static defaultModelID = "large-v3-turbo"`.
+- Строки: таблица `UI`, ключ `menu.quit`; `Resources/{en,ru}.lproj/`. Info.plist — `Resources/Info.plist`.
+- Папки `Transcription/`, `System/`, `Dictation/` содержат файлы-заглушки `_*Zone.swift` — их владелец таска вправе удалить.

@@ -11,7 +11,7 @@ window.STATE =
   "memoryFile": "CLAUDE.md",
   "skillDir": "/Users/matvejsuskov/MatveyVoice/.claude/skills/autopilot",
   "startedAt": "2026-09-20T18:52:00+03:00",
-  "updatedAt": "2026-09-20T19:02:30+03:00",
+  "updatedAt": "2026-09-20T19:03:02+03:00",
   "finishedAt": null,
   "stages": [
     {
@@ -86,10 +86,11 @@ window.STATE =
         "Sources/MatveyVoiceCore/Settings/",
         "scripts/build-app.sh"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "retries": 0,
       "repairs": 0,
-      "handoffs": 0
+      "handoffs": 0,
+      "startedAt": "2026-09-20T19:03:02+03:00"
     },
     {
       "id": "02",

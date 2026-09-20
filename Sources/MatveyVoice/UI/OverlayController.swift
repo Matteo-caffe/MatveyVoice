@@ -1,15 +1,6 @@
 import AppKit
 import SwiftUI
-import Observation
 import MatveyVoiceCore
-
-@MainActor
-@Observable
-final class OverlayModel {
-    enum Content: Equatable { case recording, transcribing, text(String) }
-    var content: Content = .transcribing
-    var level: Float = 0
-}
 
 /// Панель, которая не забирает фокус: активное приложение и поле ввода остаются прежними.
 private final class NonActivatingPanel: NSPanel {
@@ -26,25 +17,29 @@ final class OverlayController {
     private let model = OverlayModel()
     private let panel: NSPanel
     private var showTask: Task<Void, Never>?
+    private var appearTask: Task<Void, Never>?
+    private var hideTask: Task<Void, Never>?
     private var flashTask: Task<Void, Never>?
     private var levelsTask: Task<Void, Never>?
     private var flashing = false
 
     init(controller: DictationController, recorder: any AudioRecording) {
         self.controller = controller
+        let size = OverlayMetrics.panelSize
         let panel = NonActivatingPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 56),
+            contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
         panel.level = .statusBar
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        // Тень рисует сама плашка: у прозрачного окна системная осталась бы прямоугольной.
+        panel.hasShadow = false
         panel.ignoresMouseEvents = true
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         let host = NSHostingView(rootView: OverlayView(model: model))
-        host.frame = NSRect(x: 0, y: 0, width: 300, height: 56)
+        host.frame = NSRect(origin: .zero, size: size)
         panel.contentView = host
         self.panel = panel
 
@@ -79,6 +74,8 @@ final class OverlayController {
             dismiss()
         case .recording:
             model.level = 0
+            model.wave.reset()
+            model.recordingStart = Date()
             // Плашка записи появляется с задержкой: короткое нажатие не мигает.
             showTask = Task { [weak self] in
                 try? await Task.sleep(for: Self.recordingDelay)
@@ -97,55 +94,35 @@ final class OverlayController {
     }
 
     private func present() {
+        hideTask?.cancel()
+        appearTask?.cancel()
         let screen = NSScreen.main ?? NSScreen.screens.first
         guard let frame = screen?.visibleFrame else { return }
         let size = panel.frame.size
-        panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: frame.minY + 28))
+        panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: frame.minY + 4))
+        if panel.isVisible {
+            model.isShown = true
+            return
+        }
+        // Сначала окно с невидимой плашкой, и только потом «вырастание»: иначе анимации не будет.
+        model.isShown = false
         panel.orderFrontRegardless()
+        appearTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(40))
+            guard !Task.isCancelled else { return }
+            self?.model.isShown = true
+        }
     }
 
     private func dismiss() {
-        panel.orderOut(nil)
-    }
-}
-
-private struct OverlayView: View {
-    let model: OverlayModel
-
-    var body: some View {
-        HStack(spacing: 10) {
-            switch model.content {
-            case .recording:
-                Image(systemName: "mic.fill").foregroundStyle(.red)
-                LevelBars(level: model.level)
-                    .accessibilityLabel(ui("a11y.overlay.level"))
-                Text(ui("overlay.recording"))
-            case .transcribing:
-                ProgressView().controlSize(.small)
-                Text(ui("overlay.transcribing"))
-            case .text(let text):
-                Text(text).lineLimit(2).multilineTextAlignment(.center)
-            }
+        appearTask?.cancel()
+        guard panel.isVisible else { return }
+        model.isShown = false
+        hideTask?.cancel()
+        hideTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled, let self, !self.model.isShown else { return }
+            self.panel.orderOut(nil)
         }
-        .font(.system(size: 14, weight: .medium))
-        .padding(.horizontal, 16)
-        .frame(width: 300, height: 56)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-}
-
-private struct LevelBars: View {
-    let level: Float
-    var body: some View {
-        HStack(alignment: .center, spacing: 3) {
-            ForEach(0..<7, id: \.self) { index in
-                let threshold = Float(index) / 7
-                Capsule()
-                    .fill(level > threshold ? Color.red : Color.secondary.opacity(0.35))
-                    .frame(width: 4, height: 6 + CGFloat(index) * 2.5)
-            }
-        }
-        .frame(height: 24)
-        .animation(.easeOut(duration: 0.08), value: level)
     }
 }

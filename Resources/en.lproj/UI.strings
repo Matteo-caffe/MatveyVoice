@@ -40,8 +40,6 @@
 "settings.language.en" = "English";
 "settings.language.note" = "Mixing languages inside one phrase is not guaranteed to work.";
 "settings.model" = "Model";
-"settings.model.small" = "Small (~%d MB, faster)";
-"settings.model.large-v3-turbo" = "Large v3 turbo (~%d MB, more accurate)";
 "settings.model.switching" = "Downloading the new model… %d%% (the current one keeps working)";
 "settings.model.preparing" = "Preparing the new model…";
 "settings.model.switchFailed" = "Could not switch the model: %@";
@@ -69,3 +67,12 @@
 "checklist.retry" = "Retry";
 "checklist.done" = "Done";
 "checklist.later" = "Close";
+"settings.tab.general" = "General";
+"settings.tab.recognition" = "Recognition";
+"settings.mode.hold.detail" = "Hold the key while you speak, release it to insert the text.";
+"settings.mode.toggle.detail" = "Press once to start, press again to stop.";
+"settings.model.name.small" = "Small";
+"settings.model.detail.small" = "Faster, a little less accurate";
+"settings.model.name.large-v3-turbo" = "Large v3 turbo";
+"settings.model.detail.large-v3-turbo" = "Most accurate";
+"settings.model.size" = "%d MB";

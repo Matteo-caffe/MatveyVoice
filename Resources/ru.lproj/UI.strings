@@ -40,8 +40,6 @@
 "settings.language.en" = "Английский";
 "settings.language.note" = "Смесь языков внутри одной фразы работает не гарантированно.";
 "settings.model" = "Модель";
-"settings.model.small" = "Small (~%d МБ, быстрее)";
-"settings.model.large-v3-turbo" = "Large v3 turbo (~%d МБ, точнее)";
 "settings.model.switching" = "Загрузка новой модели… %d%% (пока работает прежняя)";
 "settings.model.preparing" = "Подготовка новой модели…";
 "settings.model.switchFailed" = "Не удалось сменить модель: %@";
@@ -69,3 +67,12 @@
 "checklist.retry" = "Повторить";
 "checklist.done" = "Готово";
 "checklist.later" = "Закрыть";
+"settings.tab.general" = "Основное";
+"settings.tab.recognition" = "Распознавание";
+"settings.mode.hold.detail" = "Держите клавишу, пока говорите, отпустите — текст вставится.";
+"settings.mode.toggle.detail" = "Нажмите один раз, чтобы начать, ещё раз — чтобы закончить.";
+"settings.model.name.small" = "Small";
+"settings.model.detail.small" = "Быстрее, чуть менее точная";
+"settings.model.name.large-v3-turbo" = "Large v3 turbo";
+"settings.model.detail.large-v3-turbo" = "Самая точная";
+"settings.model.size" = "%d МБ";

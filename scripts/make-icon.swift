@@ -1,4 +1,4 @@
-// Draws the MatveyVoice app icon (a simple microphone) into PNG files.
+// Draws the MatveyVoice app icon (a graphite tile with a voice waveform) into PNG files.
 // Usage: swift scripts/make-icon.swift <output-dir>   (called by make-icon.sh)
 import AppKit
 
@@ -11,29 +11,27 @@ func render(size: Int) -> Data {
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
     let u = s / 100
-    // Background: rounded square with a vertical gradient.
-    let bg = NSBezierPath(roundedRect: NSRect(x: 4*u, y: 4*u, width: 92*u, height: 92*u),
-                          xRadius: 21*u, yRadius: 21*u)
-    NSGradient(starting: NSColor(red: 0.36, green: 0.42, blue: 0.95, alpha: 1),
-               ending: NSColor(red: 0.53, green: 0.24, blue: 0.80, alpha: 1))!.draw(in: bg, angle: -90)
-    NSColor.white.setFill()
-    NSColor.white.setStroke()
-    // Capsule of the microphone.
-    NSBezierPath(roundedRect: NSRect(x: 39*u, y: 42*u, width: 22*u, height: 36*u),
-                 xRadius: 11*u, yRadius: 11*u).fill()
-    // Holder arc.
-    let arc = NSBezierPath()
-    arc.lineWidth = 5*u
-    arc.lineCapStyle = .round
-    arc.appendArc(withCenter: NSPoint(x: 50*u, y: 50*u), radius: 19*u, startAngle: 180, endAngle: 360)
-    arc.stroke()
-    // Stem and base.
-    let stem = NSBezierPath()
-    stem.lineWidth = 5*u
-    stem.lineCapStyle = .round
-    stem.move(to: NSPoint(x: 50*u, y: 31*u)); stem.line(to: NSPoint(x: 50*u, y: 20*u))
-    stem.move(to: NSPoint(x: 39*u, y: 20*u)); stem.line(to: NSPoint(x: 61*u, y: 20*u))
-    stem.stroke()
+    // Tile: dark graphite with a faint top-to-bottom falloff and a hairline edge.
+    let tile = NSRect(x: 4*u, y: 4*u, width: 92*u, height: 92*u)
+    let bg = NSBezierPath(roundedRect: tile, xRadius: 21*u, yRadius: 21*u)
+    NSGradient(starting: NSColor(white: 0.22, alpha: 1), ending: NSColor(white: 0.10, alpha: 1))!.draw(in: bg, angle: -90)
+    NSColor(white: 1, alpha: 0.10).setStroke()
+    let edge = NSBezierPath(roundedRect: tile.insetBy(dx: 0.5*u, dy: 0.5*u), xRadius: 20.5*u, yRadius: 20.5*u)
+    edge.lineWidth = 1*u
+    edge.stroke()
+    // Waveform: seven rounded bars of an uneven, speech-like height; the tallest carries the accent.
+    let heights: [CGFloat] = [0.30, 0.62, 0.44, 1.00, 0.58, 0.80, 0.34]
+    let accent = 3
+    let barWidth = 5.2*u, gap = 4.2*u, maxHeight = 50*u
+    let total = CGFloat(heights.count) * barWidth + CGFloat(heights.count - 1) * gap
+    var x = 50*u - total / 2
+    for (index, h) in heights.enumerated() {
+        let height = max(barWidth, maxHeight * h)
+        let rect = NSRect(x: x, y: 50*u - height / 2, width: barWidth, height: height)
+        (index == accent ? NSColor(red: 0.90, green: 0.27, blue: 0.06, alpha: 1) : NSColor(white: 1, alpha: 0.92)).setFill()
+        NSBezierPath(roundedRect: rect, xRadius: barWidth / 2, yRadius: barWidth / 2).fill()
+        x += barWidth + gap
+    }
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }

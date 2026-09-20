@@ -17,9 +17,21 @@ final class WindowPresenter {
 
     func show() {
         if window == nil {
-            let w = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            let w = NSWindow(
+                contentRect: .zero, styleMask: [.titled, .closable, .fullSizeContentView],
+                backing: .buffered, defer: false)
+            // Заголовок остаётся для VoiceOver и переключателя окон, но не рисуется:
+            // содержимое доходит до верхнего края, кнопки окна лежат на стекле.
             w.title = title
+            w.titleVisibility = .hidden
+            w.titlebarAppearsTransparent = true
+            w.isMovableByWindowBackground = true
+            w.isOpaque = false
+            w.backgroundColor = .clear
             w.isReleasedWhenClosed = false
+            // Окно агента должно открываться там, где сейчас пользователь, в том числе поверх полноэкранного
+            // приложения: иначе оно остаётся на том рабочем столе, где его открыли раньше, и «ничего не появляется».
+            w.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
             let content = makeContent { [weak self] in self?.window?.close() }
             w.contentView = content
             w.setContentSize(content.fittingSize)

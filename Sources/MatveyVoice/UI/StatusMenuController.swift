@@ -56,30 +56,39 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         let status = model.menuStatus
         let statusLine = NSMenuItem(title: Self.title(for: status), action: nil, keyEquivalent: "")
         statusLine.isEnabled = false
+        statusLine.image = Self.dot(for: status)
         menu.addItem(statusLine)
 
         switch status {
         case .noMicrophone:
-            menu.addItem(item("menu.openMicrophoneSettings", #selector(openMicrophonePrivacy)))
+            menu.addItem(item("menu.openMicrophoneSettings", #selector(openMicrophonePrivacy), symbol: "mic.slash"))
         case .needAccessibility:
-            menu.addItem(item("menu.openAccessibilitySettings", #selector(openAccessibilityPrivacy)))
+            menu.addItem(item("menu.openAccessibilitySettings", #selector(openAccessibilityPrivacy), symbol: "hand.raised"))
         default: break
         }
-        if status.isProblem { menu.addItem(item("menu.setup", #selector(showChecklist))) }
+        if status.isProblem { menu.addItem(item("menu.setup", #selector(showChecklist), symbol: "checklist")) }
 
         menu.addItem(.separator())
-        let copy = item("menu.copyLast", #selector(copyLast))
+        let copy = item("menu.copyLast", #selector(copyLast), symbol: "doc.on.doc")
         copy.isEnabled = model.controller.lastResult != nil
         menu.addItem(copy)
-        menu.addItem(item("menu.settings", #selector(showSettings), key: ","))
+        menu.addItem(item("menu.settings", #selector(showSettings), key: ",", symbol: "gearshape"))
         menu.addItem(.separator())
-        menu.addItem(item("menu.quit", #selector(NSApplication.terminate(_:)), key: "q", target: NSApp))
+        menu.addItem(item("menu.quit", #selector(NSApplication.terminate(_:)), key: "q", target: NSApp, symbol: "power"))
     }
 
-    private func item(_ key: String, _ action: Selector, key equivalent: String = "", target: AnyObject? = nil) -> NSMenuItem {
+    private func item(_ key: String, _ action: Selector, key equivalent: String = "",
+                      target: AnyObject? = nil, symbol: String? = nil) -> NSMenuItem {
         let item = NSMenuItem(title: ui(key), action: action, keyEquivalent: equivalent)
         item.target = target ?? self
+        if let symbol { item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) }
         return item
+    }
+
+    /// Цветная точка перед строкой статуса: зелёная — готово, красная — запись, оранжевая — нужно внимание.
+    private static func dot(for status: MenuStatus) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(paletteColors: [status.indicatorColor])
+        return NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?.withSymbolConfiguration(config)
     }
 
     @objc private func showSettings() { openSettings() }

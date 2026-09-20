@@ -57,6 +57,7 @@ scripts/  docs/manual-checklist.md  README.md  README.ru.md
 - Строки интерфейса — `String(localized: "key", table: "<Таблица>", bundle: .main)`; таблицы `Dictation`, `Transcription`, `System`, `UI` (у зоны своя), файлы `Resources/{en,ru}.lproj/<Таблица>.strings`, ключи — английские слова через точку. В UI — хелпер `ui(_:_:)` (`Sources/MatveyVoice/UI/Strings.swift`). Новый ключ — в обе локали (`LocalizationTests`).
 - Swift 6 language mode; общие типы `Sendable`.
 - SwiftUI `@State` недоступен на машине без Xcode (макрос не собирается) — используется `ObservableObject` + `@StateObject` (`SettingsView.swift`); наблюдение вне SwiftUI — `trackChanges` (`UI/Observing.swift`).
+- Визуальный язык — `Sources/MatveyVoice/UI/Design.swift`: системные нейтральные цвета, один акцент `Brand.accent`, карточки `Card`/`Block`, пружины `Motion`. Liquid Glass (`glassEffect`, `GlassEffectContainer`, `.glass`-кнопки) — только на macOS 26+ за `#available`, для 14–25 есть запасной вид. Стекло — для навигации и управления (боковая панель, плашка записи, ползунок), содержимое карточек плоское.
 - Тесты на Swift Testing (`import Testing`, `@Test`), не XCTest.
 
 ## Окружение
@@ -76,6 +77,8 @@ scripts/  docs/manual-checklist.md  README.md  README.ru.md
 - Модель тянется с Hugging Face в `~/Library/Application Support/MatveyVoice/Models` (`WhisperTranscriber.defaultDownloadBase`); токенизатор WhisperKit тоже скачивает при первой загрузке — единственный сетевой канал.
 - `scripts/build-app.sh` отказывается работать не на arm64.
 - `.gitignore` исключает `build/` и `.build/`.
+- Уже запущенный экземпляр продолжает работать старым кодом: повторный `open` лишь активирует его. Перед проверкой новой сборки завершите старую (значок в строке меню → «Выйти»).
+- Окна агента (`WindowPresenter`) имеют `.moveToActiveSpace` + `.fullScreenAuxiliary`: без этого окно остаётся на рабочем столе, где его открыли раньше, а из полноэкранного приложения кажется, что приложение «не запускается». При ручном запуске открываются настройки (чек-лист, если чего-то не хватает); при автозапуске входа — тишина.
 
 ## Как здесь работает Autopilot
 

@@ -45,7 +45,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if model.permissionsStatus.microphone == .notDetermined {
                 Task { await model.permissions.request(.microphone) }
             }
+        } else if !Self.launchedAsLoginItem() {
+            // Агент строки меню без окна выглядит так, будто приложение не запустилось: при ручном запуске
+            // показываем настройки. При автозапуске входа в систему остаёмся тихими.
+            settingsWindow?.show()
         }
+    }
+
+    /// Запуск системой при входе (`keyAELaunchedAsLogInItem` в событии открытия приложения).
+    private static func launchedAsLoginItem() -> Bool {
+        let propData = AEKeyword(0x70726474)  // 'prdt'
+        let loginItem = OSType(0x6C676974)    // 'lgit'
+        return NSAppleEventManager.shared().currentAppleEvent?
+            .paramDescriptor(forKeyword: propData)?.enumCodeValue == loginItem
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

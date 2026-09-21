@@ -72,6 +72,52 @@ extension View {
     }
 }
 
+/// Стекло приложения: `.interactive()` даёт то самое поведение Liquid Glass: при нажатии элемент упруго
+/// сжимается, по нему бежит блик от точки касания, а на отпускании он пружинит.
+@available(macOS 26, *)
+extension Glass {
+    static func liquid(tint: Color? = nil, interactive: Bool = true) -> Glass {
+        var glass = Glass.regular
+        if let tint { glass = glass.tint(tint) }
+        return interactive ? glass.interactive() : glass
+    }
+}
+
+/// Контейнер стекла: стеклянные элементы внутри перетекают друг в друга (морфинг по `glassEffectID`).
+/// На старых системах контейнера нет, содержимое показывается как есть.
+struct GlassGroup<Content: View>: View {
+    var spacing: CGFloat = 8
+    private let content: Content
+
+    init(spacing: CGFloat = 8, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    var body: some View {
+        if #available(macOS 26, *) {
+            GlassEffectContainer(spacing: spacing) { content }
+        } else {
+            content
+        }
+    }
+}
+
+/// Упругий отклик на нажатие для элементов без собственного стекла (и для всего на macOS 14–25):
+/// элемент проседает, форма подсвечивается, а при отпускании он пружинит с лёгким перелётом.
+struct LiquidPressStyle<S: InsettableShape>: ButtonStyle {
+    let shape: S
+    var scale: CGFloat = 0.96
+    var highlight = true
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background { shape.fill(Color.primary.opacity(highlight && configuration.isPressed ? 0.10 : 0)) }
+            .scaleEffect(configuration.isPressed ? scale : 1)
+            .animation(Motion.press, value: configuration.isPressed)
+    }
+}
+
 /// Иконка приложения из файла в бандле: системный кэш иконок после пересборки бывает устаревшим.
 @MainActor var appIcon: NSImage {
     Bundle.main.image(forResource: "AppIcon") ?? NSApp.applicationIconImage
@@ -85,6 +131,8 @@ enum Motion {
     static let appear = Animation.spring(response: 0.42, dampingFraction: 0.82)
     /// Переход между вкладками.
     static let pane = Animation.smooth(duration: 0.3)
+    /// Нажатие и отпускание: быстрая пружина с перелётом, как у интерактивного стекла.
+    static let press = Animation.spring(response: 0.3, dampingFraction: 0.52)
 }
 
 // MARK: карточки

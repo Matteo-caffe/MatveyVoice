@@ -37,6 +37,8 @@ struct SettingsView: View {
     @StateObject private var draft = WordDraft()
     @StateObject private var nav = SettingsNav()
     @Namespace private var tabSelection
+    @Namespace private var radio
+    @Namespace private var chips
 
     var body: some View {
         HStack(spacing: 0) {
@@ -97,8 +99,12 @@ struct SettingsView: View {
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 18)
-            ForEach(SettingsTab.allCases, id: \.self) { tab in
-                tabButton(tab)
+            GlassGroup(spacing: 4) {
+                VStack(spacing: 4) {
+                    ForEach(SettingsTab.allCases, id: \.self) { tab in
+                        tabButton(tab)
+                    }
+                }
             }
             Spacer()
             HStack(alignment: .firstTextBaseline, spacing: 7) {
@@ -117,27 +123,42 @@ struct SettingsView: View {
     private func tabButton(_ tab: SettingsTab) -> some View {
         let selected = nav.tab == tab
         return Button { withAnimation(Motion.select) { nav.tab = tab } } label: {
-            HStack(spacing: 9) {
-                Image(systemName: tab.symbol)
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(width: 18)
-                    .foregroundStyle(selected ? Brand.accent : Color.secondary)
-                Text(ui(tab.titleKey)).font(.system(size: 13, weight: selected ? .semibold : .regular))
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 30)
-            .background {
-                if selected {
+            tabLabel(tab, selected: selected)
+        }
+        // У выбранной вкладки нажатие обрабатывает само стекло (`.interactive()`), у остальных — пружина.
+        .buttonStyle(LiquidPressStyle(shape: Capsule(), scale: selected && Self.usesGlass ? 1 : 0.97,
+                                      highlight: !selected))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// Стекло накладывается на подпись целиком: иначе оно легло бы поверх текста.
+    @ViewBuilder private func tabLabel(_ tab: SettingsTab, selected: Bool) -> some View {
+        let label = HStack(spacing: 9) {
+            Image(systemName: tab.symbol)
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 18)
+                .foregroundStyle(selected ? (Self.usesGlass ? Color.primary : Brand.accent) : Color.secondary)
+            Text(ui(tab.titleKey)).font(.system(size: 13, weight: selected ? .semibold : .regular))
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 32)
+        .contentShape(Capsule())
+        if selected {
+            if #available(macOS 26, *) {
+                label
+                    .glassEffect(.liquid(tint: Brand.accent.opacity(0.20)), in: Capsule())
+                    .glassEffectID("tabSelection", in: tabSelection)
+            } else {
+                label.background {
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .fill(Color.primary.opacity(0.09))
                         .matchedGeometryEffect(id: "tabSelection", in: tabSelection)
                 }
             }
-            .contentShape(Rectangle())
+        } else {
+            label
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     // MARK: содержимое
@@ -170,14 +191,18 @@ struct SettingsView: View {
             Block(title: ui("settings.hotkey"),
                   footer: settings.hotkey == .fn ? ui("settings.hotkey.fnHint") : nil) {
                 VStack(spacing: 12) {
-                    HStack(spacing: 10) {
-                        ForEach(Hotkey.allCases, id: \.self) { hotkey in
-                            Button { settings.hotkey = hotkey } label: {
-                                Keycap(spec: hotkey.keySpec, selected: settings.hotkey == hotkey)
+                    GlassGroup(spacing: 8) {
+                        HStack(spacing: 10) {
+                            ForEach(Hotkey.allCases, id: \.self) { hotkey in
+                                Button { withAnimation(Motion.select) { settings.hotkey = hotkey } } label: {
+                                    Keycap(spec: hotkey.keySpec, selected: settings.hotkey == hotkey)
+                                }
+                                // На macOS 26+ нажатие держит само стекло клавиши, ниже — пружина.
+                                .buttonStyle(LiquidPressStyle(shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                                                              scale: Self.usesGlass ? 1 : 0.95, highlight: false))
+                                .accessibilityLabel(Self.name(of: hotkey))
+                                .accessibilityAddTraits(settings.hotkey == hotkey ? .isSelected : [])
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(Self.name(of: hotkey))
-                            .accessibilityAddTraits(settings.hotkey == hotkey ? .isSelected : [])
                         }
                     }
                     Text(Self.name(of: settings.hotkey))
@@ -217,9 +242,13 @@ struct SettingsView: View {
                     .padding(14)
             }
             Block(title: ui("settings.model")) {
-                ForEach(Array(ModelCatalog.entries.enumerated()), id: \.element.modelID) { index, entry in
-                    if index > 0 { CardDivider() }
-                    modelOption(entry)
+                GlassGroup(spacing: 0) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(ModelCatalog.entries.enumerated()), id: \.element.modelID) { index, entry in
+                            if index > 0 { CardDivider() }
+                            modelOption(entry)
+                        }
+                    }
                 }
                 CardDivider()
                 CardRow { modelStatus }
@@ -234,9 +263,11 @@ struct SettingsView: View {
         Block(footer: ui("settings.dictionary.note")) {
             if !settings.dictionary.isEmpty {
                 CardRow {
-                    FlowLayout(spacing: 6) {
-                        ForEach(settings.dictionary, id: \.self) { word in
-                            wordChip(word).transition(.scale(scale: 0.8).combined(with: .opacity))
+                    GlassGroup(spacing: 8) {
+                        FlowLayout(spacing: 6) {
+                            ForEach(settings.dictionary, id: \.self) { word in
+                                wordChip(word).transition(.scale(scale: 0.8).combined(with: .opacity))
+                            }
                         }
                     }
                 }
@@ -270,7 +301,7 @@ struct SettingsView: View {
         let selected = settings.modelID == entry.modelID
         return Button { withAnimation(Motion.select) { settings.modelID = entry.modelID } } label: {
             HStack(spacing: 12) {
-                RadioMark(selected: selected)
+                RadioMark(selected: selected, namespace: radio)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(ui("settings.model.name.\(entry.modelID)")).font(.system(size: 13, weight: .medium))
                     Text(ui("settings.model.detail.\(entry.modelID)"))
@@ -282,17 +313,20 @@ struct SettingsView: View {
                     .font(.system(size: 12).monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(LiquidPressStyle(shape: RoundedRectangle(cornerRadius: 10, style: .continuous), scale: 0.985))
+        // Поля вокруг кнопки: подсветка нажатия — скруглённая плашка внутри карточки, а не во всю строку.
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private func wordChip(_ word: String) -> some View {
-        HStack(spacing: 5) {
+    @ViewBuilder private func wordChip(_ word: String) -> some View {
+        let label = HStack(spacing: 5) {
             Text(word).font(.system(size: 13))
             Button {
                 withAnimation(Motion.appear) { settings.dictionary.removeAll { $0 == word } }
@@ -300,16 +334,22 @@ struct SettingsView: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 14, height: 14)
-                    .contentShape(Rectangle())
+                    .frame(width: 16, height: 16)
+                    .contentShape(Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(LiquidPressStyle(shape: Circle(), scale: 0.8))
             .accessibilityLabel(ui("settings.dictionary.remove"))
         }
-        .padding(.leading, 10)
+        .padding(.leading, 11)
         .padding(.trailing, 5)
-        .padding(.vertical, 4)
-        .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .padding(.vertical, 5)
+        if #available(macOS 26, *) {
+            label
+                .glassEffect(.liquid(interactive: false), in: Capsule())
+                .glassEffectID(word, in: chips)
+        } else {
+            label.background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
     }
 
     @ViewBuilder private var modelStatus: some View {
@@ -398,6 +438,28 @@ private struct Keycap: View {
     private let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
 
     var body: some View {
+        if #available(macOS 26, *) { glassBody } else { classicBody }
+    }
+
+    /// Клавиша из жидкого стекла: выбранная подкрашена акцентом, нажатие упруго проседает и бликует.
+    @available(macOS 26, *)
+    private var glassBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            glyph.font(.system(size: 17, weight: .medium))
+            Spacer(minLength: 0)
+            Text(spec.word).font(.system(size: 11, weight: .medium))
+        }
+        .foregroundStyle(selected ? Color.primary : Color.primary.opacity(0.8))
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 62)
+        .glassEffect(.liquid(tint: selected ? Brand.accent.opacity(0.26) : nil),
+                     in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .animation(.snappy(duration: 0.28), value: selected)
+    }
+
+    /// Плоская клавиша с «бортиком» для macOS 14–25; выбранная как будто нажата.
+    private var classicBody: some View {
         ZStack(alignment: .top) {
             shape
                 .fill(selected ? Brand.accent.opacity(0.55) : Color.keyLip)
@@ -435,15 +497,30 @@ private struct Keycap: View {
 
 private struct RadioMark: View {
     let selected: Bool
+    let namespace: Namespace.ID
 
     var body: some View {
         ZStack {
             Circle().strokeBorder(selected ? Brand.accent : Color.primary.opacity(0.3), lineWidth: 1.25)
-            if selected { Circle().fill(Brand.accent).padding(3.5) }
+            bead
         }
-        .frame(width: 16, height: 16)
+        .frame(width: 18, height: 18)
         .animation(Motion.select, value: selected)
         .accessibilityHidden(true)
+    }
+
+    /// Выбор — капля цветного стекла, которая перетекает от одной строки к другой.
+    @ViewBuilder private var bead: some View {
+        if selected {
+            if #available(macOS 26, *) {
+                Color.clear
+                    .frame(width: 10, height: 10)
+                    .glassEffect(.liquid(tint: Brand.accent, interactive: false), in: Circle())
+                    .glassEffectID("radio", in: namespace)
+            } else {
+                Circle().fill(Brand.accent).padding(4)
+            }
+        }
     }
 }
 
@@ -478,7 +555,7 @@ private struct SegmentedChoice<Value: Hashable>: View {
                 } label: {
                     segment(title, selected: selected)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(LiquidPressStyle(shape: Capsule(), scale: selected ? 1 : 0.97, highlight: !selected))
                 .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
@@ -488,13 +565,16 @@ private struct SegmentedChoice<Value: Hashable>: View {
     @ViewBuilder private func segment(_ title: String, selected: Bool) -> some View {
         let label = Text(title)
             .font(.system(size: 13, weight: selected ? .semibold : .regular))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 10)
             .frame(maxWidth: .infinity)
             .frame(height: 28)
             .contentShape(Capsule())
         if selected {
             if #available(macOS 26, *) {
                 label
-                    .glassEffect(.regular, in: Capsule())
+                    .glassEffect(.liquid(tint: Brand.accent.opacity(0.16)), in: Capsule())
                     .glassEffectID("thumb", in: thumb)
             } else {
                 label.background {

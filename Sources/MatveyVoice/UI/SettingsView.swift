@@ -147,7 +147,8 @@ struct SettingsView: View {
         if selected {
             if #available(macOS 26, *) {
                 label
-                    .glassEffect(.liquid(tint: Brand.accent.opacity(0.20)), in: Capsule())
+                    .glassEffect(.liquid(tint: Brand.accent.opacity(0.24)), in: Capsule())
+                    .switchGlow(Capsule())
                     .glassEffectID("tabSelection", in: tabSelection)
             } else {
                 label.background {
@@ -453,16 +454,17 @@ private struct Keycap: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 62)
-        .glassEffect(.liquid(tint: selected ? Brand.accent.opacity(0.26) : nil),
+        .glassEffect(.liquid(tint: selected ? Brand.accent.opacity(0.30) : nil),
                      in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .switchGlow(RoundedRectangle(cornerRadius: 16, style: .continuous), when: selected)
         .animation(.snappy(duration: 0.28), value: selected)
     }
 
-    /// Плоская клавиша с «бортиком» для macOS 14–25; выбранная как будто нажата.
+    /// Плоская клавиша с «бортиком» для macOS 14–25; выбранная как будто нажата, бортик и рамка — фирменный градиент.
     private var classicBody: some View {
         ZStack(alignment: .top) {
             shape
-                .fill(selected ? Brand.accent.opacity(0.55) : Color.keyLip)
+                .fill(selected ? AnyShapeStyle(Brand.switchFill.opacity(0.6)) : AnyShapeStyle(Color.keyLip))
                 .frame(height: 62)
                 .offset(y: 3)
             face.offset(y: selected ? 2 : 0)
@@ -483,8 +485,9 @@ private struct Keycap: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 62)
         .background(Color.keyFace, in: shape)
-        .overlay(shape.fill(selected ? Brand.accent.opacity(0.10) : .clear))
-        .overlay(shape.strokeBorder(selected ? Brand.accent : Color.primary.opacity(0.16), lineWidth: selected ? 1.25 : 0.75))
+        .overlay(shape.fill(selected ? AnyShapeStyle(Brand.switchFill.opacity(0.12)) : AnyShapeStyle(Color.clear)))
+        .overlay(shape.strokeBorder(selected ? AnyShapeStyle(Brand.switchFill) : AnyShapeStyle(Color.primary.opacity(0.16)),
+                                    lineWidth: selected ? 1.25 : 0.75))
     }
 
     @ViewBuilder private var glyph: some View {
@@ -518,7 +521,7 @@ private struct RadioMark: View {
                     .glassEffect(.liquid(tint: Brand.accent, interactive: false), in: Circle())
                     .glassEffectID("radio", in: namespace)
             } else {
-                Circle().fill(Brand.accent).padding(4)
+                Circle().fill(Brand.switchFill).padding(4)
             }
         }
     }
@@ -574,15 +577,19 @@ private struct SegmentedChoice<Value: Hashable>: View {
         if selected {
             if #available(macOS 26, *) {
                 label
-                    .glassEffect(.liquid(tint: Brand.accent.opacity(0.16)), in: Capsule())
+                    .glassEffect(.liquid(tint: Brand.accent.opacity(0.22)), in: Capsule())
+                    .switchGlow(Capsule())
                     .glassEffectID("thumb", in: thumb)
             } else {
-                label.background {
-                    Capsule()
-                        .fill(Color.segmentThumb)
-                        .shadow(color: .black.opacity(0.14), radius: 1.5, y: 0.5)
-                        .matchedGeometryEffect(id: "thumb", in: thumb)
-                }
+                // Без системного стекла подложка переключения — фирменный градиент, текст на ней белый.
+                label
+                    .foregroundStyle(.white)
+                    .background {
+                        Capsule()
+                            .fill(Brand.switchFill)
+                            .shadow(color: Brand.accent.opacity(0.35), radius: 4, y: 1)
+                            .matchedGeometryEffect(id: "thumb", in: thumb)
+                    }
             }
         } else {
             label

@@ -6,6 +6,12 @@ import MatveyVoiceCore
 /// Акцент — «сигнальный» оранжево-красный, как лампочка записи; им подсвечено только активное.
 enum Brand {
     static let accent = Color(red: 0.90, green: 0.27, blue: 0.06)
+    /// Золотистый край того же акцента (тёплая часть спектра, без новых оттенков) — второй стоп подложки
+    /// переключения; разница с `accent` нарочно заметна, иначе на маленькой клавише градиент не читается.
+    static let accentWarm = Color(red: 1.00, green: 0.74, blue: 0.16)
+    /// Подложка, которая скользит между вариантами при переключении (сегменты, вкладки, клавиша, модель):
+    /// двухцветный градиент в одной цветовой семье, а не плоская заливка.
+    static let switchFill = LinearGradient(colors: [accent, accentWarm], startPoint: .topLeading, endPoint: .bottomTrailing)
 }
 
 extension MenuStatus {
@@ -52,13 +58,26 @@ extension Color {
     /// Клавиша и её нижний «бортик».
     static let keyFace = dynamic(light: .white, dark: NSColor(white: 0.29, alpha: 1))
     static let keyLip = dynamic(light: NSColor(white: 0, alpha: 0.16), dark: NSColor(white: 0, alpha: 0.38))
-    /// Ползунок выбранного сегмента.
-    static let segmentThumb = dynamic(light: .white, dark: NSColor(white: 0.40, alpha: 1))
 }
 
 // MARK: стекло
 
 extension View {
+    /// Градиентный признак «переключения» поверх стекла: само стекло берёт только один сплошной цвет
+    /// тонировки (`Glass.tint` принимает `Color`, не градиент), поэтому градиент кладётся сверху —
+    /// лёгкая заливка по всей форме плюс более заметная кромка, иначе на маленьком элементе не видно.
+    func switchGlow<S: InsettableShape>(_ shape: S) -> some View {
+        overlay(shape.fill(Brand.switchFill.opacity(0.22)))
+            .overlay(shape.strokeBorder(Brand.switchFill, lineWidth: 1.75))
+    }
+
+    /// `switchGlow`, но только когда `selected` — для мест, где один и тот же вид рисует и выбранное,
+    /// и невыбранное состояние (клавиша триггера).
+    @ViewBuilder
+    func switchGlow<S: InsettableShape>(_ shape: S, when selected: Bool) -> some View {
+        if selected { switchGlow(shape) } else { self }
+    }
+
     /// Кнопка приложения: Liquid Glass на macOS 26+, на старых системах обычная системная.
     /// Главная (`prominent`) закрашена акцентом.
     @ViewBuilder
@@ -125,8 +144,8 @@ struct LiquidPressStyle<S: InsettableShape>: ButtonStyle {
 
 /// Плавные пружины приложения: одни и те же во всём интерфейсе, чтобы движение ощущалось единым.
 enum Motion {
-    /// Смена выбора, перемещение подсветки.
-    static let select = Animation.smooth(duration: 0.34)
+    /// Смена выбора, перемещение подсветки: пружина с лёгким перелётом — читается как «переключение», не просто фейд.
+    static let select = Animation.spring(response: 0.34, dampingFraction: 0.74)
     /// Появление и исчезновение элементов.
     static let appear = Animation.spring(response: 0.42, dampingFraction: 0.82)
     /// Переход между вкладками.

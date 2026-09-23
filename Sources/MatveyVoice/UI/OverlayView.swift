@@ -26,8 +26,9 @@ final class WaveSmoother {
     }
 
     func step(toward rawLevel: Double, at time: Double) -> Double {
-        // Шум комнаты (~-45 дБ) не должен шевелить волну: срезаем низ и слегка растягиваем верх.
-        let target = pow(max(0, (rawLevel - 0.12) / 0.88), 0.8)
+        // Шум комнаты (~-45 дБ) не должен шевелить волну: срезаем низ. Вход уже в дБ (AudioRecorder),
+        // поэтому дальше без искусственного сжатия — иначе тихая и громкая речь выглядят одинаково.
+        let target = max(0, (rawLevel - 0.12) / 0.88)
         let dt = min(max(time - lastTime, 0), 0.1)
         lastTime = time
         let rate = target > value ? 16.0 : 5.0
@@ -132,14 +133,16 @@ private struct WaveBars: View {
                     + 0.45 * (0.5 + 0.5 * sin(t * 4.3 - Double(index) * 0.9))
                 // В тишине волна чуть дышит, чтобы было видно, что запись идёт.
                 let idle = 0.08 + 0.05 * motion
-                let voice = level * (0.30 + 0.70 * motion)
+                // Бегущая волна — лёгкая рябь поверх голоса, а не отдельный источник амплитуды: раньше она
+                // качала высоту от 0.3× до 1.0×, из-за чего громкость почти не читалась за анимацией.
+                let voice = level * (0.72 + 0.28 * motion)
                 let amplitude = max(idle, voice)
                 Capsule()
                     .fill(ink.opacity(0.45 + 0.5 * min(1, amplitude * envelope * 1.6)))
-                    .frame(width: 2.5, height: 3 + 19 * amplitude * envelope)
+                    .frame(width: 2.5, height: 4 + 26 * amplitude * envelope)
             }
         }
-        .frame(height: 24)
+        .frame(height: 32)
     }
 }
 

@@ -7,15 +7,18 @@ import Carbon.HIToolbox
 public final class TextInserter: TextInserting, @unchecked Sendable {
     private let pasteboard: NSPasteboard
     private let isTrusted: @Sendable () -> Bool
+    private let isSecureFieldFocused: @Sendable () -> Bool
     private let sendPaste: @Sendable () -> Void
     private let restoreDelay: Duration
 
     public init(pasteboard: NSPasteboard = .general,
                 isTrusted: @escaping @Sendable () -> Bool = { AXIsProcessTrusted() },
+                isSecureFieldFocused: @escaping @Sendable () -> Bool = TextInserter.focusedElementIsSecure,
                 sendPaste: @escaping @Sendable () -> Void = TextInserter.postCommandV,
                 restoreDelay: Duration = .milliseconds(250)) {
         self.pasteboard = pasteboard
         self.isTrusted = isTrusted
+        self.isSecureFieldFocused = isSecureFieldFocused
         self.sendPaste = sendPaste
         self.restoreDelay = restoreDelay
     }
@@ -27,6 +30,8 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
             pasteboard.setString(text, forType: .string)
             return .copiedOnly(reason: String(localized: "insert.noAccess", table: "System", bundle: .main))
         }
+        // В поле пароля не вставляем и буфер не трогаем: пароль не должен пройти через буфер обмена.
+        if isSecureFieldFocused() { return .blockedSecureField }
         let saved = Self.snapshot(pasteboard)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
@@ -65,6 +70,15 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
             return item
         }
         pb.writeObjects(items)
+    }
+
+    @Sendable public static func focusedElementIsSecure() -> Bool {
+        var focused: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(AXUIElementCreateSystemWide(), kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+              let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { return false }
+        var subrole: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(focused as! AXUIElement, kAXSubroleAttribute as CFString, &subrole) == .success else { return false }
+        return (subrole as? String) == kAXSecureTextFieldSubrole
     }
 
     /// Cmd+V only; never Return.

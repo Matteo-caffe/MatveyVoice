@@ -6,5 +6,6 @@
 "message.recognitionFailed %@" = "Не удалось распознать: %@";
 "message.noSpeech" = "Не расслышал";
 "message.needAccess" = "Нужен доступ";
+"message.secureField" = "Поле пароля — текст не вставлен";
 "message.insertFailed %@" = "Не удалось вставить текст: %@";
 "message.recordingLimit" = "Достигнут лимит записи — распознаю то, что успел";

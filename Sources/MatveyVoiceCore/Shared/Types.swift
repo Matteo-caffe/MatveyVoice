@@ -42,6 +42,7 @@ public enum ModelState: Sendable, Equatable {
 public enum InsertResult: Sendable, Equatable {
     case inserted
     case copiedOnly(reason: String)
+    case blockedSecureField
 }
 
 public enum PermissionKind: String, Sendable, CaseIterable {

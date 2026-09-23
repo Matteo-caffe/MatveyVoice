@@ -11,4 +11,6 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$DMG"
 hdiutil create -volname "MatveyVoice" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
+(cd build && shasum -a 256 MatveyVoice.dmg > MatveyVoice.dmg.sha256)
 echo "Built $DMG"
+cat build/MatveyVoice.dmg.sha256

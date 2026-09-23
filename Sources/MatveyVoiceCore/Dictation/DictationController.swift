@@ -152,6 +152,8 @@ public final class DictationController {
                 state = .idle
             case .copiedOnly:
                 show(String(localized: "message.needAccess", table: "Dictation", bundle: .main))
+            case .blockedSecureField:
+                show(String(localized: "message.secureField", table: "Dictation", bundle: .main))
             }
         } catch {
             show(String(localized: "message.insertFailed \(error.localizedDescription)", table: "Dictation", bundle: .main))

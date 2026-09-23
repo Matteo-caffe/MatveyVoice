@@ -264,6 +264,14 @@ private struct Rig {
         #expect(r.controller.lastResult == "привет мир")
     }
 
+    @Test func blockedSecureFieldShowsMessage() async {
+        let r = Rig()
+        r.inserter.result = .blockedSecureField
+        r.controller.handlePress(); r.controller.handleRelease()
+        await r.controller.waitForCompletion()
+        #expect(r.controller.state == .message(text: "message.secureField"))
+    }
+
     @Test func insertThrowingShowsMessage() async {
         let r = Rig()
         r.inserter.error = Boom()

@@ -6,5 +6,6 @@
 "message.recognitionFailed %@" = "Recognition failed: %@";
 "message.noSpeech" = "Didn't catch that";
 "message.needAccess" = "Access needed";
+"message.secureField" = "Password field — text not inserted";
 "message.insertFailed %@" = "Could not insert text: %@";
 "message.recordingLimit" = "Recording limit reached — transcribing what was captured";

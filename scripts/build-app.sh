@@ -18,5 +18,7 @@ if [ -f Resources/AppIcon.icns ]; then
   /usr/libexec/PlistBuddy -c "Delete :CFBundleIconFile" "$APP/Contents/Info.plist" 2>/dev/null || true
   /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP/Contents/Info.plist"
 fi
-codesign --force --deep -s - "$APP"
+# Hardened Runtime: no DYLD_* injection, library validation stays on; only the microphone is allowed.
+codesign --force --options runtime --entitlements Resources/MatveyVoice.entitlements -s - "$APP"
+codesign --verify --strict "$APP"
 echo "Built $APP"

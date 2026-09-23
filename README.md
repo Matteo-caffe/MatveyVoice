@@ -16,7 +16,13 @@ Inspired by the idea of Aqua Voice. MatveyVoice is an independent project: it is
 
 ### From the .dmg
 
-1. Download `MatveyVoice.dmg` from the [Releases](https://github.com/Matteo-caffe/MatveyVoice/releases) page.
+1. Download `MatveyVoice.dmg` and `MatveyVoice.dmg.sha256` from the [Releases](https://github.com/Matteo-caffe/MatveyVoice/releases) page. Only download from there: builds from forks or other sites are not official.
+   Check that the file was not tampered with (it should print `MatveyVoice.dmg: OK`):
+
+   ```
+   cd ~/Downloads && shasum -a 256 -c MatveyVoice.dmg.sha256
+   ```
+
 2. Open it and drag MatveyVoice onto the Applications shortcut.
 3. The first launch is blocked by Gatekeeper because the app is not notarized. On macOS 15 or newer, try to open the app once, then go to System Settings > Privacy & Security, scroll down to the message about MatveyVoice and click "Open Anyway". On macOS 14, right-click the app and choose "Open". Or, on any version, run:
 
@@ -73,7 +79,7 @@ The model is downloaded once from Hugging Face into `~/Library/Application Suppo
 
 ## Privacy
 
-Nothing is sent anywhere: no analytics, no telemetry, no accounts. The only network traffic is the one-time model download. Audio and dictated text are not saved to disk.
+Nothing is sent anywhere: no analytics, no telemetry, no accounts. The only network traffic is the one-time model download. Audio and dictated text are not saved to disk, and text is never pasted into password fields. Details: [PRIVACY.md](PRIVACY.md). To report a vulnerability: [SECURITY.md](SECURITY.md).
 
 ## Manual test checklist
 

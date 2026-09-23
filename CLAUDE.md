@@ -6,10 +6,11 @@
 ## Команды
 
 Все проверены.
-- Тесты: `swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing` (72 passed)
+- Тесты: `swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing` (74 passed)
 - Один тест: `swift test --filter <Имя> -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing`
-- Приложение: `scripts/build-app.sh` → `build/MatveyVoice.app` (arm64, ad-hoc подпись); запуск `open build/MatveyVoice.app`
-- dmg: `scripts/make-dmg.sh` → `build/MatveyVoice.dmg`
+- Приложение: `scripts/build-app.sh` → `build/MatveyVoice.app` (arm64, ad-hoc подпись + Hardened Runtime, права — `Resources/MatveyVoice.entitlements`: только `audio-input`; не добавлять `disable-library-validation`/`allow-dyld-environment-variables`); запуск `open build/MatveyVoice.app`
+- dmg: `scripts/make-dmg.sh` → `build/MatveyVoice.dmg` + `build/MatveyVoice.dmg.sha256`
+- Релиз: пуш тега `v*` → `.github/workflows/release.yml` (раннер `macos-26`) собирает dmg, делает attestation и черновик релиза. Экшены закреплены по SHA.
 - Иконка: `scripts/make-icon.sh` → `Resources/AppIcon.icns`
 
 ## Структура
@@ -46,7 +47,7 @@ scripts/  docs/manual-checklist.md  README.md  README.ru.md
 - `Transcribing`: `state` (`notInstalled/downloading(progress:)/preparing/ready/failed(reason:)`), `prepare(modelID:) async`, `transcribe(_:language:hints:) async throws -> Transcription?` (`nil` = речи нет), `cancelPrepare()`. Реализация `WhisperTranscriber(downloadBase:)`; `state` до `prepare` — `.notInstalled`, приложение обязано вызвать `prepare` при старте. `switchProgress: ModelState?` — только на `WhisperTranscriber`, не в протоколе: прогресс смены модели при уже рабочей (`state` остаётся `.ready`).
 - Постфильтры: `SpeechFilter.isSilent/isHallucination`, `TextPostProcessor.process(_:removeFillers:)` (чистая), `TranscriptionErrorDescriber.reason(for:)`. Автоопределение языка ограничено ru/en.
 - `AudioRecording`: `start() throws`, `stop() -> RecordedAudio` (16 кГц моно `[Float]`), `levels: AsyncStream<Float>`. У `AudioRecorder` есть `onLimitReached`, нигде не подключён.
-- `TextInserting.insert(_:) async throws -> InsertResult` (`inserted`/`copiedOnly(reason:)`): буфер обмена + синтетический ⌘V, прежний буфер возвращается через 250 мс, если его не меняли.
+- `TextInserting.insert(_:) async throws -> InsertResult` (`inserted`/`copiedOnly(reason:)`/`blockedSecureField`): буфер обмена + синтетический ⌘V, прежний буфер возвращается через 250 мс, если его не меняли. Если в фокусе поле пароля (AX subrole `AXSecureTextField`) — не вставляет и буфер не трогает.
 - `Permissions`: `status`, `request(_:)`, `openSettings(_:)`, `changes` (опрос раз в секунду). Универсальный доступ бывает только `.notDetermined`/`.granted`.
 - Общие типы (`Sendable`): `Hotkey{rightOption,rightCommand,rightControl,fn}`, `TriggerMode{hold,toggle}`, `Language{auto,ru,en}`, `RecordedAudio`, `Transcription`, `InsertResult`, `PermissionsStatus`.
 - `AppSettings` (`@MainActor @Observable`, `init(defaults:)`): hotkey, triggerMode, language, modelID, dictionary, removeFillers, launchAtLogin, setupCompleted.

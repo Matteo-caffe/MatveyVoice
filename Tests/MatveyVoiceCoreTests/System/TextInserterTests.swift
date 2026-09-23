@@ -20,6 +20,21 @@ private final class PB: @unchecked Sendable { let pb: NSPasteboard; init(_ p: NS
         #expect(pb.string(forType: .string) == "привет")
     }
 
+    @Test func secureFieldBlocksPasteAndLeavesPasteboardUntouched() async throws {
+        let pb = makePasteboard()
+        pb.clearContents()
+        pb.setString("old text", forType: .string)
+        let before = pb.changeCount
+        let c = Counter()
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, isSecureFieldFocused: { true },
+                               sendPaste: { c.pastes += 1 }, restoreDelay: .milliseconds(1))
+        let r = try await ins.insert("hunter2")
+        #expect(r == .blockedSecureField)
+        #expect(c.pastes == 0)
+        #expect(pb.changeCount == before)
+        #expect(pb.string(forType: .string) == "old text")
+    }
+
     @Test func pastesOnceAndRestoresAllTypes() async throws {
         let pb = makePasteboard()
         let item = NSPasteboardItem()
@@ -29,7 +44,7 @@ private final class PB: @unchecked Sendable { let pb: NSPasteboard; init(_ p: NS
         let c = Counter()
         let seen = Counter()
         let box = PB(pb)
-        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, sendPaste: {
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, isSecureFieldFocused: { false }, sendPaste: {
             c.pastes += 1
             if box.pb.string(forType: .string) == "new text" { seen.pastes += 1 }
         }, restoreDelay: .milliseconds(1))
@@ -45,7 +60,7 @@ private final class PB: @unchecked Sendable { let pb: NSPasteboard; init(_ p: NS
         let pb = makePasteboard()
         let box = PB(pb)
         let during = Marks()
-        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, sendPaste: {
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, isSecureFieldFocused: { false }, sendPaste: {
             let types = box.pb.types ?? []
             during.transient = types.contains(NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
             during.concealed = types.contains(NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
@@ -73,7 +88,7 @@ private final class PB: @unchecked Sendable { let pb: NSPasteboard; init(_ p: NS
         let pb = makePasteboard()
         pb.setString("old", forType: .string)
         let box = PB(pb)
-        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, sendPaste: {}, restoreDelay: .milliseconds(300))
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, isSecureFieldFocused: { false }, sendPaste: {}, restoreDelay: .milliseconds(300))
         let started = ContinuousClock.now
         let task = Task { try await ins.insert("new") }
         try await Task.sleep(for: .milliseconds(50))

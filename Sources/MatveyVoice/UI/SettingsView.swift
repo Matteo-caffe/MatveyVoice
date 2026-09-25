@@ -223,6 +223,18 @@ struct SettingsView: View {
                 }
                 .padding(14)
             }
+            Block(title: ui("settings.sendKeyword"), footer: ui("settings.sendKeyword.note")) {
+                CardRow {
+                    HStack(spacing: 8) {
+                        WordField(text: $settings.sendKeyword, placeholder: ui("settings.sendKeyword.placeholder"),
+                                  onSubmit: finishKeywordEditing)
+                        Button(ui("settings.sendKeyword.done"), action: finishKeywordEditing)
+                            .appButton(prominent: true)
+                    }
+                }
+                CardDivider()
+                toggleRow(title: ui("settings.sendKeyword.commandReturn"), isOn: $settings.sendUsesCommandReturn)
+            }
             Block {
                 toggleRow(title: ui("settings.launchAtLogin"), isOn: $settings.launchAtLogin)
                 if let error = model.launchAtLoginError {
@@ -390,6 +402,14 @@ struct SettingsView: View {
         case .failed: .red
         case .notInstalled: .orange
         case .downloading, .preparing: .blue
+        }
+    }
+
+    /// Слово сохраняется на лету; «Готово» только снимает фокус, чтобы курсор не оставался в поле.
+    /// Не через `keyWindow`: у агента строки меню окно настроек бывает не ключевым (например, под системным запросом).
+    private func finishKeywordEditing() {
+        for window in NSApp.windows where window.firstResponder is NSText {
+            window.makeFirstResponder(nil)
         }
     }
 

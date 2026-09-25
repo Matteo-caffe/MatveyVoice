@@ -128,12 +128,16 @@ public final class DictationController {
         let language = settings.language
         let hints = settings.dictionary
         let removeFillers = settings.removeFillers
+        let sendKeyword = settings.sendKeyword
+        let sendUsesCommandReturn = settings.sendUsesCommandReturn
         pipelineTask = Task { [weak self] in
-            await self?.process(audio, language: language, hints: hints, removeFillers: removeFillers)
+            await self?.process(audio, language: language, hints: hints, removeFillers: removeFillers,
+                                 sendKeyword: sendKeyword, sendUsesCommandReturn: sendUsesCommandReturn)
         }
     }
 
-    private func process(_ audio: RecordedAudio, language: Language, hints: [String], removeFillers: Bool) async {
+    private func process(_ audio: RecordedAudio, language: Language, hints: [String], removeFillers: Bool,
+                          sendKeyword: String, sendUsesCommandReturn: Bool) async {
         defer { isProcessing = false }
         let result: Transcription?
         do {
@@ -142,12 +146,14 @@ public final class DictationController {
             return show(String(localized: "message.recognitionFailed \(error.localizedDescription)", table: "Dictation", bundle: .main))
         }
         guard let result else { return showNoSpeech() }
-        let text = postProcess(result.text, removeFillers)
+        let processed = postProcess(result.text, removeFillers)
+        guard !processed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return showNoSpeech() }
+        let (text, shouldSend) = TextPostProcessor.extractSendCommand(processed, keyword: sendKeyword)
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return showNoSpeech() }
         lastResult = text
         state = .inserting
         do {
-            switch try await inserter.insert(text) {
+            switch try await inserter.insert(text, pressReturn: shouldSend, commandReturn: sendUsesCommandReturn) {
             case .inserted:
                 state = .idle
             case .copiedOnly:

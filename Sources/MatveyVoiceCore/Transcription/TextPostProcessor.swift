@@ -53,4 +53,28 @@ public enum TextPostProcessor {
         let regex = try! NSRegularExpression(pattern: pattern)
         return regex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: template)
     }
+
+    private static let trailingBeforeKeyword = CharacterSet(charactersIn: ",.!?…;:").union(.whitespacesAndNewlines)
+
+    /// If `text` ends with the send `keyword` as a whole word (case-insensitive, allowing trailing
+    /// punctuation after it), strips the keyword and reports that a voice-send was requested. The
+    /// sentence's own trailing punctuation (e.g. "?") is kept — only whitespace before the keyword is trimmed.
+    public static func extractSendCommand(_ text: String, keyword: String) -> (text: String, shouldSend: Bool) {
+        let trimmedKeyword = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedKeyword.isEmpty else { return (text, false) }
+
+        var core = Substring(text)
+        while let last = core.unicodeScalars.last, trailingBeforeKeyword.contains(last) {
+            core.removeLast()
+        }
+        guard core.count >= trimmedKeyword.count else { return (text, false) }
+
+        let cut = core.index(core.endIndex, offsetBy: -trimmedKeyword.count)
+        guard core[cut...].caseInsensitiveCompare(trimmedKeyword) == .orderedSame else { return (text, false) }
+        let before = core[..<cut]
+        // Word boundary: the keyword must not be a suffix of a longer word.
+        if let last = before.last, !last.isWhitespace { return (text, false) }
+
+        return (before.trimmingCharacters(in: .whitespacesAndNewlines), true)
+    }
 }

@@ -9,21 +9,27 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
     private let isTrusted: @Sendable () -> Bool
     private let isSecureFieldFocused: @Sendable () -> Bool
     private let sendPaste: @Sendable () -> Void
+    private let sendReturn: @Sendable (Bool) -> Void
     private let restoreDelay: Duration
+    private let returnDelay: Duration
 
     public init(pasteboard: NSPasteboard = .general,
                 isTrusted: @escaping @Sendable () -> Bool = { AXIsProcessTrusted() },
                 isSecureFieldFocused: @escaping @Sendable () -> Bool = TextInserter.focusedElementIsSecure,
                 sendPaste: @escaping @Sendable () -> Void = TextInserter.postCommandV,
-                restoreDelay: Duration = .milliseconds(250)) {
+                sendReturn: @escaping @Sendable (Bool) -> Void = TextInserter.postReturn(withCommand:),
+                restoreDelay: Duration = .milliseconds(250),
+                returnDelay: Duration = .milliseconds(150)) {
         self.pasteboard = pasteboard
         self.isTrusted = isTrusted
         self.isSecureFieldFocused = isSecureFieldFocused
         self.sendPaste = sendPaste
+        self.sendReturn = sendReturn
         self.restoreDelay = restoreDelay
+        self.returnDelay = returnDelay
     }
 
-    public func insert(_ text: String) async throws -> InsertResult {
+    public func insert(_ text: String, pressReturn: Bool, commandReturn: Bool) async throws -> InsertResult {
         guard isTrusted() else {
             // Пользователь сам вставит текст: пометка «временный» не нужна, но и прежнее не восстанавливаем.
             pasteboard.clearContents()
@@ -40,6 +46,12 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
         pasteboard.setData(Data(), forType: Self.concealedType)
         let ourChange = pasteboard.changeCount
         sendPaste()
+        if pressReturn {
+            // Пауза, чтобы принимающее приложение успело обработать вставку до Return.
+            // Нажатие идёт в отдельной задаче: postReturn держит клавишу ~30 мс и не должен блокировать вызывающего.
+            let delay = returnDelay, send = sendReturn
+            await Task.detached { try? await Task.sleep(for: delay); send(commandReturn) }.value
+        }
         // Отмена вызывающей задачи не должна приводить к немедленному восстановлению:
         // приложение-получатель ещё может читать буфер. Ждём в отдельной задаче.
         let delay = restoreDelay
@@ -81,7 +93,7 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
         return (subrole as? String) == kAXSecureTextFieldSubrole
     }
 
-    /// Cmd+V only; never Return.
+    /// Cmd+V only; Return is a separate, explicit action (see `postReturn`), never implied by paste.
     @Sendable public static func postCommandV() {
         let src = CGEventSource(stateID: .combinedSessionState)
         let vKey = cachedKeyCodeForV()
@@ -89,6 +101,28 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
             let e = CGEvent(keyboardEventSource: src, virtualKey: vKey, keyDown: down)
             e?.flags = .maskCommand
             e?.post(tap: .cgAnnotatedSessionEventTap)
+        }
+    }
+
+    /// Hardware Return for voice-send (`pressReturn`): posted at the HID level, where a physical keyboard
+    /// enters the event stream, with a short hold between down and up like a real press. `kVK_Return` is a
+    /// physical key position, unaffected by keyboard layout. `withCommand` is for apps that send with ⌘+Return.
+    @Sendable public static func postReturn(withCommand: Bool) {
+        let events = returnEvents(withCommand: withCommand)
+        guard events.count == 2 else { return }
+        events[0].post(tap: .cghidEventTap)
+        usleep(30_000)
+        events[1].post(tap: .cghidEventTap)
+    }
+
+    /// Flags are always assigned explicitly: a fresh keyboard CGEvent carries a stray 0x20000000 bit
+    /// that Telegram reads as a modifier, so a bare Return inserted a newline instead of sending.
+    static func returnEvents(withCommand: Bool) -> [CGEvent] {
+        let src = CGEventSource(stateID: .hidSystemState)
+        return [true, false].compactMap { down in
+            let e = CGEvent(keyboardEventSource: src, virtualKey: CGKeyCode(kVK_Return), keyDown: down)
+            e?.flags = withCommand ? .maskCommand : []
+            return e
         }
     }
 }

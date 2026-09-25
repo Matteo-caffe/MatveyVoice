@@ -14,6 +14,10 @@ public final class AppSettings {
     public var modelID: String { didSet { defaults.set(modelID, forKey: Key.modelID) } }
     public var dictionary: [String] { didSet { defaults.set(dictionary, forKey: Key.dictionary) } }
     public var removeFillers: Bool { didSet { defaults.set(removeFillers, forKey: Key.removeFillers) } }
+    /// Слово в конце диктовки, которое вставляет текст и сразу нажимает Return. Пусто = функция выключена.
+    public var sendKeyword: String { didSet { defaults.set(sendKeyword, forKey: Key.sendKeyword) } }
+    /// Некоторым приложениям (например, Telegram с настройкой «Отправлять по ⌘+Return») нужен ⌘+Return вместо обычного Return.
+    public var sendUsesCommandReturn: Bool { didSet { defaults.set(sendUsesCommandReturn, forKey: Key.sendUsesCommandReturn) } }
     public var launchAtLogin: Bool { didSet { defaults.set(launchAtLogin, forKey: Key.launchAtLogin) } }
 
     /// Первичная настройка (разрешения и модель) хотя бы раз была завершена.
@@ -27,6 +31,8 @@ public final class AppSettings {
         modelID = defaults.string(forKey: Key.modelID) ?? Self.defaultModelID
         dictionary = defaults.stringArray(forKey: Key.dictionary) ?? []
         removeFillers = defaults.object(forKey: Key.removeFillers) as? Bool ?? true
+        sendKeyword = defaults.string(forKey: Key.sendKeyword) ?? ""
+        sendUsesCommandReturn = defaults.object(forKey: Key.sendUsesCommandReturn) as? Bool ?? false
         setupCompleted = defaults.bool(forKey: Key.setupCompleted)
         launchAtLogin = defaults.object(forKey: Key.launchAtLogin) as? Bool ?? false
     }
@@ -38,6 +44,8 @@ public final class AppSettings {
         static let modelID = "modelID"
         static let dictionary = "dictionary"
         static let removeFillers = "removeFillers"
+        static let sendKeyword = "sendKeyword"
+        static let sendUsesCommandReturn = "sendUsesCommandReturn"
         static let launchAtLogin = "launchAtLogin"
         static let setupCompleted = "setupCompleted"
     }

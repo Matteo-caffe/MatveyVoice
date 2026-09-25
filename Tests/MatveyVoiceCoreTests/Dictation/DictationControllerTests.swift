@@ -33,9 +33,17 @@ private final class FakeTranscriber: Transcribing, @unchecked Sendable {
 
 private final class FakeInserter: TextInserting, @unchecked Sendable {
     var inserted: [String] = []
+    var pressedReturn: [Bool] = []
+    var pressedCommandReturn: [Bool] = []
     var result: InsertResult = .inserted
     var error: Error?
-    func insert(_ text: String) async throws -> InsertResult { inserted.append(text); if let error { throw error }; return result }
+    func insert(_ text: String, pressReturn: Bool, commandReturn: Bool) async throws -> InsertResult {
+        inserted.append(text)
+        pressedReturn.append(pressReturn)
+        pressedCommandReturn.append(commandReturn)
+        if let error { throw error }
+        return result
+    }
 }
 
 /// Ручные часы: sleep висит, пока тест не вызовет fire.
@@ -111,6 +119,47 @@ private struct Rig {
         await r.controller.waitForCompletion()
         #expect(r.controller.state == .message(text: "message.noSpeech"))
         #expect(r.inserter.inserted.isEmpty)
+    }
+
+    @Test func withoutSendKeywordConfiguredReturnIsNeverPressed() async {
+        let r = Rig()
+        r.controller.handlePress(); r.controller.handleRelease()
+        await r.controller.waitForCompletion()
+        #expect(r.inserter.inserted == ["привет мир"])
+        #expect(r.inserter.pressedReturn == [false])
+    }
+
+    @Test func trailingSendKeywordIsStrippedAndTriggersReturn() async {
+        let r = Rig()
+        r.settings.sendKeyword = "отправить"
+        r.transcriber.result = Transcription(text: "привет, как дела? отправить")
+        r.controller.handlePress(); r.controller.handleRelease()
+        await r.controller.waitForCompletion()
+        #expect(r.inserter.inserted == ["привет, как дела?"])
+        #expect(r.inserter.pressedReturn == [true])
+        #expect(r.controller.lastResult == "привет, как дела?")
+        #expect(r.controller.state == .idle)
+    }
+
+    @Test func sendKeywordAloneWithNoOtherSpeechIsTreatedAsSilence() async {
+        let r = Rig()
+        r.settings.sendKeyword = "отправить"
+        r.transcriber.result = Transcription(text: "отправить")
+        r.controller.handlePress(); r.controller.handleRelease()
+        await r.controller.waitForCompletion()
+        #expect(r.controller.state == .message(text: "message.noSpeech"))
+        #expect(r.inserter.inserted.isEmpty)
+    }
+
+    @Test func sendUsesCommandReturnSettingIsPassedToInserter() async {
+        let r = Rig()
+        r.settings.sendKeyword = "отправить"
+        r.settings.sendUsesCommandReturn = true
+        r.transcriber.result = Transcription(text: "привет отправить")
+        r.controller.handlePress(); r.controller.handleRelease()
+        await r.controller.waitForCompletion()
+        #expect(r.inserter.pressedReturn == [true])
+        #expect(r.inserter.pressedCommandReturn == [true])
     }
 
     @Test func cancelDiscardsRecordingWithoutTrace() async {

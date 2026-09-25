@@ -1,5 +1,6 @@
 import Testing
 import AppKit
+import Carbon.HIToolbox
 @testable import MatveyVoiceCore
 
 private final class Counter: @unchecked Sendable { var pastes = 0 }
@@ -99,6 +100,70 @@ private final class PB: @unchecked Sendable { let pb: NSPasteboard; init(_ p: NS
         _ = try await task.value
         #expect(ContinuousClock.now - started >= .milliseconds(280))
         #expect(pb.string(forType: .string) == "old")
+    }
+
+    @Test func pressReturnFalseNeverSendsReturn() async throws {
+        let pb = makePasteboard()
+        let returns = Counter()
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, isSecureFieldFocused: { false },
+                               sendPaste: {}, sendReturn: { _ in returns.pastes += 1 },
+                               restoreDelay: .milliseconds(1), returnDelay: .milliseconds(1))
+        let r = try await ins.insert("hello", pressReturn: false, commandReturn: false)
+        #expect(r == .inserted)
+        #expect(returns.pastes == 0)
+    }
+
+    @Test func pressReturnTrueSendsReturnAfterPaste() async throws {
+        let pb = makePasteboard()
+        let order = Counter()
+        let pasteOrder = Counter()
+        let returnOrder = Counter()
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, isSecureFieldFocused: { false }, sendPaste: {
+            order.pastes += 1; pasteOrder.pastes = order.pastes
+        }, sendReturn: { _ in
+            order.pastes += 1; returnOrder.pastes = order.pastes
+        }, restoreDelay: .milliseconds(1), returnDelay: .milliseconds(1))
+        let r = try await ins.insert("hello", pressReturn: true, commandReturn: false)
+        #expect(r == .inserted)
+        #expect(pasteOrder.pastes == 1)
+        #expect(returnOrder.pastes == 2)
+    }
+
+    @Test func commandReturnFlagIsForwardedToSendReturn() async throws {
+        let pb = makePasteboard()
+        let seenCommand = Counter()
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, isSecureFieldFocused: { false }, sendPaste: {},
+                               sendReturn: { withCommand in seenCommand.pastes = withCommand ? 1 : 0 },
+                               restoreDelay: .milliseconds(1), returnDelay: .milliseconds(1))
+        _ = try await ins.insert("hello", pressReturn: true, commandReturn: true)
+        #expect(seenCommand.pastes == 1)
+    }
+
+    @Test(arguments: [false, true]) func returnEventsCarryOnlyTheRequestedModifier(withCommand: Bool) {
+        let events = TextInserter.returnEvents(withCommand: withCommand)
+        #expect(events.count == 2)
+        for e in events {
+            #expect(e.flags == (withCommand ? .maskCommand : []))
+            #expect(e.getIntegerValueField(.keyboardEventKeycode) == Int64(kVK_Return))
+        }
+    }
+
+    @Test func pressReturnIsSkippedWithoutAccess() async throws {
+        let pb = makePasteboard()
+        let returns = Counter()
+        let ins = TextInserter(pasteboard: pb, isTrusted: { false }, sendReturn: { _ in returns.pastes += 1 },
+                               restoreDelay: .milliseconds(1))
+        _ = try await ins.insert("hello", pressReturn: true, commandReturn: false)
+        #expect(returns.pastes == 0)
+    }
+
+    @Test func pressReturnIsSkippedForSecureField() async throws {
+        let pb = makePasteboard()
+        let returns = Counter()
+        let ins = TextInserter(pasteboard: pb, isTrusted: { true }, isSecureFieldFocused: { true },
+                               sendReturn: { _ in returns.pastes += 1 }, restoreDelay: .milliseconds(1))
+        _ = try await ins.insert("hello", pressReturn: true, commandReturn: false)
+        #expect(returns.pastes == 0)
     }
 }
 

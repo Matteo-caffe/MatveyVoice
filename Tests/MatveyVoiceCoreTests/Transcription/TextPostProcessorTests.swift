@@ -47,4 +47,40 @@ import Testing
         #expect(TextPostProcessor.process("Привет. Э, как дела", removeFillers: true) == "Привет. Как дела")
         #expect(TextPostProcessor.process("Done! Um so what next?", removeFillers: true) == "Done! So what next?")
     }
+
+    @Test func extractSendCommandStripsTrailingKeywordAndKeepsSentencePunctuation() {
+        let r = TextPostProcessor.extractSendCommand("Привет, как дела? Отправить", keyword: "отправить")
+        #expect(r.text == "Привет, как дела?")
+        #expect(r.shouldSend)
+    }
+
+    @Test func extractSendCommandIsCaseInsensitiveAndAllowsTrailingPunctuation() {
+        let r = TextPostProcessor.extractSendCommand("hello world SEND.", keyword: "send")
+        #expect(r.text == "hello world")
+        #expect(r.shouldSend)
+    }
+
+    @Test func extractSendCommandRequiresWholeWordMatch() {
+        let r = TextPostProcessor.extractSendCommand("хочу переотправить", keyword: "отправить")
+        #expect(r.text == "хочу переотправить")
+        #expect(!r.shouldSend)
+    }
+
+    @Test func extractSendCommandIgnoresKeywordNotAtEnd() {
+        let r = TextPostProcessor.extractSendCommand("send hello world", keyword: "send")
+        #expect(r.text == "send hello world")
+        #expect(!r.shouldSend)
+    }
+
+    @Test func extractSendCommandWithEmptyKeywordNeverMatches() {
+        let r = TextPostProcessor.extractSendCommand("hello send", keyword: "")
+        #expect(r.text == "hello send")
+        #expect(!r.shouldSend)
+    }
+
+    @Test func extractSendCommandWithOnlyTheKeywordLeavesEmptyText() {
+        let r = TextPostProcessor.extractSendCommand("Send", keyword: "send")
+        #expect(r.text == "")
+        #expect(r.shouldSend)
+    }
 }

@@ -15,7 +15,19 @@ public protocol Transcribing: AnyObject, Sendable {
 }
 
 public protocol TextInserting: AnyObject, Sendable {
-    func insert(_ text: String) async throws -> InsertResult
+    /// - Parameters:
+    ///   - pressReturn: после вставки синтетически нажать Return (голосовая отправка).
+    ///   - commandReturn: нажать с ⌘ — для приложений вроде Telegram с настройкой «Отправлять по ⌘+Return».
+    func insert(_ text: String, pressReturn: Bool, commandReturn: Bool) async throws -> InsertResult
+}
+
+public extension TextInserting {
+    func insert(_ text: String) async throws -> InsertResult {
+        try await insert(text, pressReturn: false, commandReturn: false)
+    }
+    func insert(_ text: String, pressReturn: Bool) async throws -> InsertResult {
+        try await insert(text, pressReturn: pressReturn, commandReturn: false)
+    }
 }
 
 public protocol PermissionsProviding: AnyObject, Sendable {

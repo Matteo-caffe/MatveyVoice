@@ -49,6 +49,11 @@
 "settings.dictionary.add" = "Добавить";
 "settings.dictionary.remove" = "Удалить слово";
 "settings.removeFillers" = "Убирать слова-паразиты";
+"settings.sendKeyword" = "Голосовая отправка";
+"settings.sendKeyword.placeholder" = "Слово или фраза (например, «отправить»)";
+"settings.sendKeyword.note" = "Скажите это слово в конце диктовки, чтобы текст вставился и сразу отправился нажатием Return — без лишних клавиш. Если приложению для отправки нужен ⌘+Return (например, в Telegram включена настройка «Отправлять по ⌘+Return»), включите переключатель ниже. Оставьте слово пустым, чтобы выключить всё целиком.";
+"settings.sendKeyword.commandReturn" = "Отправлять через ⌘+Return";
+"settings.sendKeyword.done" = "Готово";
 "settings.launchAtLogin" = "Запускать при входе";
 "checklist.window" = "Добро пожаловать в MatveyVoice";
 "checklist.title" = "Подготовим MatveyVoice к работе";

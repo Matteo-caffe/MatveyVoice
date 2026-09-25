@@ -40,5 +40,9 @@ final class WindowPresenter {
         }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        // SwiftUI сам ставит курсор в первое текстовое поле: окно выходит поверх, и набранное
+        // в другом приложении попадает в настройки (так затёрлось слово голосовой отправки).
+        // Фокус ставится уже после показа окна, поэтому снимаем его на следующем проходе цикла событий.
+        DispatchQueue.main.async { [weak self] in self?.window?.makeFirstResponder(nil) }
     }
 }

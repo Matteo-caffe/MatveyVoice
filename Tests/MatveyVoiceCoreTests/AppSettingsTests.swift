@@ -20,6 +20,8 @@ struct AppSettingsTests {
         #expect(s.removeFillers == true)
         #expect(s.launchAtLogin == false)
         #expect(s.dictionary.isEmpty)
+        #expect(s.sendKeyword == "")
+        #expect(s.sendUsesCommandReturn == false)
     }
 
     @Test func setupCompletedDefaultsFalseAndPersists() {
@@ -40,6 +42,8 @@ struct AppSettingsTests {
         a.dictionary = ["Матвей", "WhisperKit"]
         a.removeFillers = false
         a.launchAtLogin = true
+        a.sendKeyword = "отправить"
+        a.sendUsesCommandReturn = true
 
         let b = AppSettings(defaults: d)
         #expect(b.hotkey == .fn)
@@ -49,5 +53,7 @@ struct AppSettingsTests {
         #expect(b.dictionary == ["Матвей", "WhisperKit"])
         #expect(b.removeFillers == false)
         #expect(b.launchAtLogin == true)
+        #expect(b.sendKeyword == "отправить")
+        #expect(b.sendUsesCommandReturn == true)
     }
 }

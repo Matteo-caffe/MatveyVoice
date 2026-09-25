@@ -15,7 +15,7 @@ struct ChecklistView: View {
                 Text(ui("checklist.title")).font(.system(size: 20, weight: .semibold))
                 Text(ui("checklist.subtitle"))
                     .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                     .multilineTextAlignment(.center)
             }
             .padding(.top, 48)
@@ -74,7 +74,7 @@ struct ChecklistView: View {
                     Text(title).font(.system(size: 13, weight: .semibold))
                     Text(detail)
                         .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                     extra().padding(.top, 4)
                     if !done {
@@ -101,7 +101,7 @@ struct ChecklistView: View {
                     .transition(.scale(scale: 0.3).combined(with: .opacity))
             } else {
                 Circle().strokeBorder(Color.primary.opacity(0.22), lineWidth: 1.25)
-                Image(systemName: symbol).font(.system(size: 13, weight: .medium)).foregroundStyle(.secondary)
+                Image(systemName: symbol).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.secondaryText)
             }
         }
         .frame(width: 30, height: 30)

@@ -51,7 +51,7 @@
 "settings.removeFillers" = "Remove filler words";
 "settings.sendKeyword" = "Voice send";
 "settings.sendKeyword.placeholder" = "Word or phrase (e.g. “send”)";
-"settings.sendKeyword.note" = "Say this word at the end of dictation to insert the text and press Return right away — no extra key needed. If the app needs ⌘+Return to send (e.g. Telegram with “Send with ⌘+Return” enabled), turn that on below. Leave the word empty to turn this off.";
+"settings.sendKeyword.note" = "Say this word at the end of dictation to insert the text and send it right away. Turn on ⌘+Return for apps that send with that shortcut. Leave empty to turn this off.";
 "settings.sendKeyword.commandReturn" = "Send with ⌘+Return";
 "settings.sendKeyword.done" = "Done";
 "settings.launchAtLogin" = "Launch at login";

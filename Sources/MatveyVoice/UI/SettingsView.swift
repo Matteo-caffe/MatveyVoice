@@ -46,7 +46,7 @@ struct SettingsView: View {
             if !Self.usesGlass { Rectangle().fill(Color.hairline).frame(width: 0.5).ignoresSafeArea() }
             content
         }
-        .frame(width: 680, height: 520)
+        .frame(width: 680, height: 600)
         .background { windowBackground }
         .tint(Brand.accent)
     }
@@ -111,7 +111,7 @@ struct SettingsView: View {
                 StatusDot(color: Color(nsColor: status.indicatorColor), size: 7)
                 Text(StatusMenuController.title(for: status))
                     .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 10)
@@ -135,9 +135,9 @@ struct SettingsView: View {
     @ViewBuilder private func tabLabel(_ tab: SettingsTab, selected: Bool) -> some View {
         let label = HStack(spacing: 9) {
             Image(systemName: tab.symbol)
-                .font(.system(size: 13, weight: .medium))
-                .frame(width: 18)
-                .foregroundStyle(selected ? (Self.usesGlass ? Color.primary : Brand.accent) : Color.secondary)
+                .font(.system(size: 14, weight: .medium))
+                .frame(width: 20)
+                .foregroundStyle(selected ? (Self.usesGlass ? Color.primary : Brand.accent) : Color.secondaryText)
             Text(ui(tab.titleKey)).font(.system(size: 13, weight: selected ? .semibold : .regular))
             Spacer(minLength: 0)
         }
@@ -166,15 +166,15 @@ struct SettingsView: View {
 
     private var content: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                Text(ui(nav.tab.titleKey)).font(.system(size: 22, weight: .semibold))
+            VStack(alignment: .leading, spacing: 16) {
+                Text(ui(nav.tab.titleKey)).font(.system(size: 20, weight: .semibold))
                 pane
             }
             .id(nav.tab)
             .transition(.opacity.combined(with: .offset(y: 8)))
             .padding(.horizontal, 28)
-            .padding(.top, 36)
-            .padding(.bottom, 28)
+            .padding(.top, 26)
+            .padding(.bottom, 22)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -188,10 +188,10 @@ struct SettingsView: View {
     }
 
     private var generalPane: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
             Block(title: ui("settings.hotkey"),
-                  footer: settings.hotkey == .fn ? ui("settings.hotkey.fnHint") : nil) {
-                VStack(spacing: 12) {
+                  footer: settings.hotkey == .fn ? ui("settings.hotkey.fnHint") : nil, plain: true) {
+                VStack(alignment: .leading, spacing: 7) {
                     GlassGroup(spacing: 8) {
                         HStack(spacing: 10) {
                             ForEach(Hotkey.allCases, id: \.self) { hotkey in
@@ -199,7 +199,7 @@ struct SettingsView: View {
                                     Keycap(spec: hotkey.keySpec, selected: settings.hotkey == hotkey)
                                 }
                                 // На macOS 26+ нажатие держит само стекло клавиши, ниже — пружина.
-                                .buttonStyle(LiquidPressStyle(shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                                .buttonStyle(LiquidPressStyle(shape: RoundedRectangle(cornerRadius: 13, style: .continuous),
                                                               scale: Self.usesGlass ? 1 : 0.95, highlight: false))
                                 .accessibilityLabel(Self.name(of: hotkey))
                                 .accessibilityAddTraits(settings.hotkey == hotkey ? .isSelected : [])
@@ -207,21 +207,22 @@ struct SettingsView: View {
                         }
                     }
                     Text(Self.name(of: settings.hotkey))
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.secondaryText)
+                        .padding(.horizontal, 4)
                 }
-                .padding(14)
             }
-            Block(title: ui("settings.mode")) {
-                VStack(alignment: .leading, spacing: 10) {
+            Block(title: ui("settings.mode"), plain: true) {
+                VStack(alignment: .leading, spacing: 7) {
                     SegmentedChoice(
                         options: [(TriggerMode.hold, ui("settings.mode.hold")), (.toggle, ui("settings.mode.toggle"))],
                         selection: $settings.triggerMode)
                     Text(ui(settings.triggerMode == .hold ? "settings.mode.hold.detail" : "settings.mode.toggle.detail"))
                         .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 4)
                 }
-                .padding(14)
             }
             Block(title: ui("settings.sendKeyword"), footer: ui("settings.sendKeyword.note")) {
                 CardRow {
@@ -246,13 +247,12 @@ struct SettingsView: View {
     }
 
     private var recognitionPane: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            Block(title: ui("settings.language"), footer: ui("settings.language.note")) {
+        VStack(alignment: .leading, spacing: 18) {
+            Block(title: ui("settings.language"), footer: ui("settings.language.note"), plain: true) {
                 SegmentedChoice(
                     options: [(Language.auto, ui("settings.language.auto")), (.ru, ui("settings.language.ru")),
                               (.en, ui("settings.language.en"))],
                     selection: $settings.language)
-                    .padding(14)
             }
             Block(title: ui("settings.model")) {
                 GlassGroup(spacing: 0) {
@@ -319,12 +319,12 @@ struct SettingsView: View {
                     Text(ui("settings.model.name.\(entry.modelID)")).font(.system(size: 13, weight: .medium))
                     Text(ui("settings.model.detail.\(entry.modelID)"))
                         .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondaryText)
                 }
                 Spacer(minLength: 8)
                 Text(ui("settings.model.size", entry.approximateMegabytes))
                     .font(.system(size: 12).monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 9)
@@ -346,7 +346,7 @@ struct SettingsView: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                     .frame(width: 16, height: 16)
                     .contentShape(Circle())
             }
@@ -392,7 +392,7 @@ struct SettingsView: View {
     private func statusLine(_ color: Color, _ text: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
             StatusDot(color: color, size: 7)
-            Text(text).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(text).font(.system(size: 12)).foregroundStyle(Color.secondaryText)
         }
     }
 
@@ -466,44 +466,48 @@ private struct Keycap: View {
     @available(macOS 26, *)
     private var glassBody: some View {
         VStack(alignment: .leading, spacing: 0) {
-            glyph.font(.system(size: 17, weight: .medium))
+            glyph.font(.system(size: 15, weight: .medium))
             Spacer(minLength: 0)
             Text(spec.word).font(.system(size: 11, weight: .medium))
         }
         .foregroundStyle(selected ? Color.primary : Color.primary.opacity(0.8))
-        .padding(10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 62)
-        .glassEffect(.liquid(tint: selected ? Brand.accent.opacity(0.30) : nil),
-                     in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .switchGlow(RoundedRectangle(cornerRadius: 16, style: .continuous), when: selected)
+        .frame(height: Self.height)
+        .glassEffect(.liquid(tint: selected ? Brand.accent.opacity(0.18) : nil),
+                     in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .switchGlow(RoundedRectangle(cornerRadius: 13, style: .continuous), when: selected, fill: 0.1)
         .animation(.snappy(duration: 0.28), value: selected)
     }
+
+    private static let height: CGFloat = 50
 
     /// Плоская клавиша с «бортиком» для macOS 14–25; выбранная как будто нажата, бортик и рамка — фирменный градиент.
     private var classicBody: some View {
         ZStack(alignment: .top) {
             shape
-                .fill(selected ? AnyShapeStyle(Brand.switchFill.opacity(0.6)) : AnyShapeStyle(Color.keyLip))
-                .frame(height: 62)
+                .fill(selected ? AnyShapeStyle(Brand.switchFill.opacity(0.5)) : AnyShapeStyle(Color.keyLip))
+                .frame(height: Self.height)
                 .offset(y: 3)
             face.offset(y: selected ? 2 : 0)
         }
-        .frame(height: 65)
+        .frame(height: Self.height + 3)
         .animation(.snappy(duration: 0.28), value: selected)
     }
 
     private var face: some View {
         VStack(alignment: .leading, spacing: 0) {
             glyph
-                .font(.system(size: 17, weight: .medium))
+                .font(.system(size: 15, weight: .medium))
             Spacer(minLength: 0)
             Text(spec.word).font(.system(size: 11, weight: .medium))
         }
         .foregroundStyle(selected ? Brand.accent : Color.primary.opacity(0.85))
-        .padding(10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 62)
+        .frame(height: Self.height)
         .background(Color.keyFace, in: shape)
         .overlay(shape.fill(selected ? AnyShapeStyle(Brand.switchFill.opacity(0.12)) : AnyShapeStyle(Color.clear)))
         .overlay(shape.strokeBorder(selected ? AnyShapeStyle(Brand.switchFill) : AnyShapeStyle(Color.primary.opacity(0.16)),

@@ -54,7 +54,11 @@ extension Color {
     static let windowFill = Color(nsColor: .windowBackgroundColor)
     /// Карточка светлее фона в обеих темах: белая на светлом, чуть подсвеченная на тёмном.
     static let cardFill = dynamic(light: .controlBackgroundColor, dark: NSColor(white: 1, alpha: 0.06))
+    /// Край карточки: заливка уже отделяет её от фона, рамка лишь чуть подчёркивает.
+    static let cardEdge = Color.primary.opacity(0.05)
     static let hairline = Color.primary.opacity(0.09)
+    /// Второстепенный текст и значки: чуть контрастнее системного `.secondary`, который на стекле читается плохо.
+    static let secondaryText = dynamic(light: NSColor(white: 0, alpha: 0.62), dark: NSColor(white: 1, alpha: 0.64))
     /// Клавиша и её нижний «бортик».
     static let keyFace = dynamic(light: .white, dark: NSColor(white: 0.29, alpha: 1))
     static let keyLip = dynamic(light: NSColor(white: 0, alpha: 0.16), dark: NSColor(white: 0, alpha: 0.38))
@@ -66,16 +70,17 @@ extension View {
     /// Градиентный признак «переключения» поверх стекла: само стекло берёт только один сплошной цвет
     /// тонировки (`Glass.tint` принимает `Color`, не градиент), поэтому градиент кладётся сверху —
     /// лёгкая заливка по всей форме плюс более заметная кромка, иначе на маленьком элементе не видно.
-    func switchGlow<S: InsettableShape>(_ shape: S) -> some View {
-        overlay(shape.fill(Brand.switchFill.opacity(0.22)))
+    /// `fill` — сила заливки; большим элементам (клавиша) нужна слабее, иначе они выглядят сплошной плашкой.
+    func switchGlow<S: InsettableShape>(_ shape: S, fill: Double = 0.22) -> some View {
+        overlay(shape.fill(Brand.switchFill.opacity(fill)))
             .overlay(shape.strokeBorder(Brand.switchFill, lineWidth: 1.75))
     }
 
     /// `switchGlow`, но только когда `selected` — для мест, где один и тот же вид рисует и выбранное,
     /// и невыбранное состояние (клавиша триггера).
     @ViewBuilder
-    func switchGlow<S: InsettableShape>(_ shape: S, when selected: Bool) -> some View {
-        if selected { switchGlow(shape) } else { self }
+    func switchGlow<S: InsettableShape>(_ shape: S, when selected: Bool, fill: Double = 0.22) -> some View {
+        if selected { switchGlow(shape, fill: fill) } else { self }
     }
 
     /// Кнопка приложения: Liquid Glass на macOS 26+, на старых системах обычная системная.
@@ -168,7 +173,7 @@ struct Card<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) { content }
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.cardFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.hairline, lineWidth: 0.5))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.cardEdge, lineWidth: 0.5))
     }
 }
 
@@ -189,7 +194,7 @@ struct CardRow<Content: View>: View {
     var body: some View {
         content
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -198,27 +203,30 @@ struct CardRow<Content: View>: View {
 struct Block<Content: View>: View {
     let title: String?
     let footer: String?
+    /// Без подложки: для элементов со своим видом (клавиши, сегменты), чтобы не было «карточки в карточке».
+    let plain: Bool
     private let content: Content
 
-    init(title: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
+    init(title: String? = nil, footer: String? = nil, plain: Bool = false, @ViewBuilder content: () -> Content) {
         self.title = title
         self.footer = footer
+        self.plain = plain
         self.content = content()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 7) {
             if let title {
                 Text(title)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                     .padding(.horizontal, 4)
             }
-            Card { content }
+            if plain { content } else { Card { content } }
             if let footer {
                 Text(footer)
                     .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 4)
             }

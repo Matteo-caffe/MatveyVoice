@@ -9,7 +9,7 @@ let package = Package(
         .executable(name: "MatveyVoice", targets: ["MatveyVoice"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.9.0"),
+        .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "1.1.0"),
     ],
     targets: [
         .target(

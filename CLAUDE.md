@@ -77,6 +77,7 @@ scripts/  docs/manual-checklist.md  README.md  README.ru.md
 - Ad-hoc подпись (`codesign -s -`) в `scripts/build-app.sh` меняется при каждой пересборке — права «Универсальный доступ» и микрофон для `build/MatveyVoice.app` придётся выдавать заново.
 - Модель тянется с Hugging Face в `~/Library/Application Support/MatveyVoice/Models` (`WhisperTranscriber.defaultDownloadBase`); токенизатор WhisperKit тоже скачивает при первой загрузке — единственный сетевой канал.
 - Синтетическим клавишам (`CGEvent(keyboardEventSource:…)`) всегда задавать `flags` явно: новое событие несёт лишний бит `0x20000000`, который AppKit-приложения видят в `modifierFlags`. Telegram из-за него считал Return «с модификатором» и переносил строку вместо отправки.
+- WhisperKit не ниже 1.1.0: в 0.x с непустым словарём (`promptTokens`) декодер обрывался ещё на подсказке — любой результат пустой, «не расслышал».
 - `scripts/build-app.sh` отказывается работать не на arm64.
 - `.gitignore` исключает `build/` и `.build/`.
 - Уже запущенный экземпляр продолжает работать старым кодом: повторный `open` лишь активирует его. Перед проверкой новой сборки завершите старую (значок в строке меню → «Выйти»).

@@ -74,6 +74,13 @@ public final class AudioRecorder: AudioRecording, @unchecked Sendable {
         return RecordedAudio(samples: samples, duration: Double(samples.count) / AudioResampler.targetRate)
     }
 
+    public func recentAudio(seconds: TimeInterval) -> RecordedAudio {
+        lock.lock()
+        let tail = Array(buffer.samples.suffix(Int(seconds * AudioResampler.targetRate)))
+        lock.unlock()
+        return RecordedAudio(samples: tail, duration: Double(tail.count) / AudioResampler.targetRate)
+    }
+
     private func halt(_ engine: AVAudioEngine?) {
         guard let engine else { return }
         engine.inputNode.removeTap(onBus: 0)

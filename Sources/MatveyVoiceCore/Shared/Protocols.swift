@@ -3,6 +3,8 @@ import Foundation
 public protocol AudioRecording: AnyObject, Sendable {
     func start() throws
     func stop() -> RecordedAudio
+    /// Last `seconds` of the ongoing recording, from memory (for voice send without holding a key).
+    func recentAudio(seconds: TimeInterval) -> RecordedAudio
     var levels: AsyncStream<Float> { get }
 }
 

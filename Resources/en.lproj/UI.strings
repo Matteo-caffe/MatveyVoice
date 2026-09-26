@@ -27,6 +27,12 @@
 "settings.title" = "MatveyVoice Settings";
 "settings.hotkey" = "Trigger key";
 "settings.hotkey.fnHint" = "For Fn: in System Settings › Keyboard, set “Press 🌐 key to” to “Do Nothing”, otherwise macOS will open emoji or its own dictation.";
+"settings.hotkey.guide.hold" = "Hold %@ to record, release to insert the text";
+"settings.hotkey.guide.latch" = "Control + %@ records without holding";
+"settings.hotkey.guide.latchLeft" = "Left Control + %@ records without holding";
+"settings.hotkey.guide.stop" = "%@ again to finish, Esc to cancel";
+"settings.hotkey.guide.toggle" = "Press %@ to record, press again to insert the text";
+"settings.hotkey.guide.voiceSend" = "Say “%@” at the end to send the text";
 "hotkey.rightOption" = "Right Option ⌥";
 "hotkey.rightCommand" = "Right Command ⌘";
 "hotkey.rightControl" = "Right Control ⌃";
@@ -51,7 +57,7 @@
 "settings.removeFillers" = "Remove filler words";
 "settings.sendKeyword" = "Voice send";
 "settings.sendKeyword.placeholder" = "Word or phrase (e.g. “send”)";
-"settings.sendKeyword.note" = "Say this word at the end of dictation to insert the text and send it right away. Turn on ⌘+Return for apps that send with that shortcut. Leave empty to turn this off.";
+"settings.sendKeyword.note" = "Say this word at the end of dictation to insert the text and send it right away. When recording without holding the key, it also stops the recording once you say the word and pause. Turn on ⌘+Return for apps that send with that shortcut. Leave empty to turn this off.";
 "settings.sendKeyword.commandReturn" = "Send with ⌘+Return";
 "settings.sendKeyword.done" = "Done";
 "settings.launchAtLogin" = "Launch at login";
@@ -74,7 +80,7 @@
 "checklist.later" = "Close";
 "settings.tab.general" = "General";
 "settings.tab.recognition" = "Recognition";
-"settings.mode.hold.detail" = "Hold the key while you speak, release it to insert the text. Control + key records without holding: press the key again to finish, Esc to cancel.";
+"settings.mode.hold.detail" = "Hold the key while you speak, release it to insert the text.";
 "settings.mode.toggle.detail" = "Press once to start, press again to stop.";
 "settings.model.name.small" = "Small";
 "settings.model.detail.small" = "Faster, a little less accurate";

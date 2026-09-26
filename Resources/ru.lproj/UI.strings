@@ -27,6 +27,12 @@
 "settings.title" = "Настройки MatveyVoice";
 "settings.hotkey" = "Клавиша запуска";
 "settings.hotkey.fnHint" = "Для Fn: в Системных настройках › Клавиатура выберите для «Нажатие 🌐» значение «Ничего не делать», иначе macOS откроет эмодзи или свою диктовку.";
+"settings.hotkey.guide.hold" = "Удерживайте %@ — запись голоса, отпустите — текст вставится";
+"settings.hotkey.guide.latch" = "Control + %@ — запись без удержания";
+"settings.hotkey.guide.latchLeft" = "Левый Control + %@ — запись без удержания";
+"settings.hotkey.guide.stop" = "%@ ещё раз — закончить, Esc — отменить";
+"settings.hotkey.guide.toggle" = "Нажмите %@ — запись голоса, ещё раз — текст вставится";
+"settings.hotkey.guide.voiceSend" = "Скажите «%@» в конце — текст отправится";
 "hotkey.rightOption" = "Правый Option ⌥";
 "hotkey.rightCommand" = "Правый Command ⌘";
 "hotkey.rightControl" = "Правый Control ⌃";
@@ -51,7 +57,7 @@
 "settings.removeFillers" = "Убирать слова-паразиты";
 "settings.sendKeyword" = "Голосовая отправка";
 "settings.sendKeyword.placeholder" = "Слово или фраза (например, «отправить»)";
-"settings.sendKeyword.note" = "Скажите это слово в конце диктовки — текст вставится и сразу отправится. ⌘+Return нужен приложениям, которые отправляют этой комбинацией. Пустое поле выключает функцию.";
+"settings.sendKeyword.note" = "Скажите это слово в конце диктовки — текст вставится и сразу отправится. Без удержания клавиши запись закончится сама, как только вы скажете слово и замолчите. ⌘+Return нужен приложениям, которые отправляют этой комбинацией. Пустое поле выключает функцию.";
 "settings.sendKeyword.commandReturn" = "Отправлять через ⌘+Return";
 "settings.sendKeyword.done" = "Готово";
 "settings.launchAtLogin" = "Запускать при входе";
@@ -74,7 +80,7 @@
 "checklist.later" = "Закрыть";
 "settings.tab.general" = "Основное";
 "settings.tab.recognition" = "Распознавание";
-"settings.mode.hold.detail" = "Держите клавишу, пока говорите, отпустите — текст вставится. Control + клавиша — запись без удержания: закончить — нажать клавишу ещё раз, отменить — Esc.";
+"settings.mode.hold.detail" = "Держите клавишу, пока говорите, отпустите — текст вставится.";
 "settings.mode.toggle.detail" = "Нажмите один раз, чтобы начать, ещё раз — чтобы закончить.";
 "settings.model.name.small" = "Small";
 "settings.model.detail.small" = "Быстрее, чуть менее точная";

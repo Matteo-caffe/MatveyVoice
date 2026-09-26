@@ -210,6 +210,15 @@ struct SettingsView: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.secondaryText)
                         .padding(.horizontal, 4)
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(hotkeyGuide, id: \.self) { line in
+                            Text("• " + line)
+                        }
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
                 }
             }
             Block(title: ui("settings.mode"), plain: true) {
@@ -420,6 +429,31 @@ struct SettingsView: View {
             if !settings.dictionary.contains(word) { settings.dictionary.append(word) }
         }
         draft.text = ""
+    }
+
+    /// Шпаргалка под клавишами: что делает выбранная клавиша в текущем режиме.
+    private var hotkeyGuide: [String] {
+        let key = Self.shortName(of: settings.hotkey)
+        var lines: [String]
+        if settings.triggerMode == .hold {
+            lines = [ui("settings.hotkey.guide.hold", key),
+                     ui(settings.hotkey == .rightControl ? "settings.hotkey.guide.latchLeft" : "settings.hotkey.guide.latch", key),
+                     ui("settings.hotkey.guide.stop", key)]
+        } else {
+            lines = [ui("settings.hotkey.guide.toggle", key)]
+        }
+        let keyword = settings.sendKeyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !keyword.isEmpty { lines.append(ui("settings.hotkey.guide.voiceSend", keyword)) }
+        return lines
+    }
+
+    static func shortName(of hotkey: Hotkey) -> String {
+        switch hotkey {
+        case .rightOption: "⌥"
+        case .rightCommand: "⌘"
+        case .rightControl: "⌃"
+        case .fn: "Fn"
+        }
     }
 
     static func name(of hotkey: Hotkey) -> String {

@@ -54,6 +54,13 @@ import Testing
         #expect(r.shouldSend)
     }
 
+    @Test(arguments: ["Привет, отправить.", "Привет; отправить", "Привет: отправить", "Привет — отправить", "Привет - отправить"])
+    func extractSendCommandDropsDanglingPunctuationBeforeKeyword(text: String) {
+        let r = TextPostProcessor.extractSendCommand(text, keyword: "отправить")
+        #expect(r.text == "Привет")
+        #expect(r.shouldSend)
+    }
+
     @Test func extractSendCommandIsCaseInsensitiveAndAllowsTrailingPunctuation() {
         let r = TextPostProcessor.extractSendCommand("hello world SEND.", keyword: "send")
         #expect(r.text == "hello world")

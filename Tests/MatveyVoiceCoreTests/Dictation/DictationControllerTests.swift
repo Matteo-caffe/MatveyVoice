@@ -9,6 +9,12 @@ private final class FakeRecorder: AudioRecording, @unchecked Sendable {
     var levels: AsyncStream<Float> { AsyncStream { $0.finish() } }
     func start() throws { if let startError { throw startError }; startCalls += 1 }
     func stop() -> RecordedAudio { stopCalls += 1; return RecordedAudio(samples: [0.1], duration: duration) }
+    /// Хвост записи для голосовой отправки; по умолчанию — речь без паузы в конце.
+    var recent: [Float] = FakeRecorder.speech(pause: 0)
+    func recentAudio(seconds: TimeInterval) -> RecordedAudio { RecordedAudio(samples: recent, duration: Double(recent.count) / 16_000) }
+    static func speech(pause: Double) -> [Float] {
+        (0..<24_000).map { i in 0.2 * (i % 2 == 0 ? 1 : -1) } + Array(repeating: 0, count: Int(pause * 16_000))
+    }
 }
 
 private struct Boom: Error, LocalizedError { var errorDescription: String? { "boom" } }
@@ -309,6 +315,78 @@ private struct Rig {
         #expect(r.controller.state == .transcribing)
         #expect(r.recorder.startCalls == 1)
         await r.controller.waitForCompletion()
+    }
+
+    private func handsFreeRig(keyword: String = "отправить", said: String) -> Rig {
+        let r = Rig()
+        r.settings.sendKeyword = keyword
+        r.transcriber.result = Transcription(text: said)
+        r.recorder.recent = FakeRecorder.speech(pause: 1)
+        return r
+    }
+
+    private func tick(_ r: Rig) async {
+        await r.waitUntil { r.clock.waiting(DictationController.voiceSendPollInterval) }
+        r.clock.fire(DictationController.voiceSendPollInterval)
+        for _ in 0..<50 { await Task.yield() }
+    }
+
+    @Test func sendKeywordThenPauseStopsHandsFreeRecordingAndSends() async {
+        let r = handsFreeRig(said: "привет, отправить")
+        r.controller.handleLatch()
+        await tick(r)
+        #expect(r.controller.state != .recording)
+        await r.controller.waitForCompletion()
+        #expect(r.inserter.inserted == ["привет"])
+        #expect(r.inserter.pressedReturn == [true])
+    }
+
+    @Test func sendKeywordStopsToggleRecordingToo() async {
+        let r = handsFreeRig(said: "привет отправить")
+        r.settings.triggerMode = .toggle
+        r.controller.handlePress()
+        await tick(r)
+        await r.controller.waitForCompletion()
+        #expect(r.inserter.inserted == ["привет"])
+        #expect(r.inserter.pressedReturn == [true])
+    }
+
+    @Test func pauseWithoutKeywordKeepsRecordingAndIsCheckedOnce() async {
+        let r = handsFreeRig(said: "привет мир")
+        r.controller.handleLatch()
+        await tick(r)
+        await tick(r)
+        #expect(r.controller.state == .recording)
+        #expect(r.transcriber.calls.count == 1)
+        // speech resumes, then a new pause is checked again
+        r.recorder.recent = FakeRecorder.speech(pause: 0)
+        await tick(r)
+        r.recorder.recent = FakeRecorder.speech(pause: 1)
+        await tick(r)
+        #expect(r.transcriber.calls.count == 2)
+        r.controller.handlePress()
+        await r.controller.waitForCompletion()
+        #expect(r.inserter.pressedReturn == [false])
+    }
+
+    @Test func holdRecordingIsNeverStoppedByVoice() async {
+        let r = handsFreeRig(said: "привет отправить")
+        r.controller.handlePress()
+        await tick(r)
+        #expect(r.controller.state == .recording)
+        #expect(r.transcriber.calls.isEmpty)
+        r.controller.handleRelease()
+        await r.controller.waitForCompletion()
+        #expect(r.inserter.pressedReturn == [true])   // the keyword still works on release
+    }
+
+    @Test func withoutKeywordHandsFreeIsNotWatched() async {
+        let r = handsFreeRig(keyword: "", said: "привет отправить")
+        r.controller.handleLatch()
+        await tick(r)
+        #expect(r.controller.state == .recording)
+        #expect(r.transcriber.calls.isEmpty)
+        r.controller.handleCancel()
     }
 
     @Test func recordingHittingLimitShowsMessageAndIsStillTranscribed() async {

@@ -54,11 +54,12 @@ public enum TextPostProcessor {
         return regex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: template)
     }
 
+    private static let danglingBeforeKeyword = CharacterSet(charactersIn: ",;:—–-")
     private static let trailingBeforeKeyword = CharacterSet(charactersIn: ",.!?…;:").union(.whitespacesAndNewlines)
 
     /// If `text` ends with the send `keyword` as a whole word (case-insensitive, allowing trailing
     /// punctuation after it), strips the keyword and reports that a voice-send was requested. The
-    /// sentence's own trailing punctuation (e.g. "?") is kept — only whitespace before the keyword is trimmed.
+    /// sentence's own trailing punctuation (e.g. "?") is kept; a dangling comma, colon or dash is dropped.
     public static func extractSendCommand(_ text: String, keyword: String) -> (text: String, shouldSend: Bool) {
         let trimmedKeyword = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedKeyword.isEmpty else { return (text, false) }
@@ -75,6 +76,12 @@ public enum TextPostProcessor {
         // Word boundary: the keyword must not be a suffix of a longer word.
         if let last = before.last, !last.isWhitespace { return (text, false) }
 
-        return (before.trimmingCharacters(in: .whitespacesAndNewlines), true)
+        // A comma, colon or dash before the keyword leaves the sentence hanging: drop it.
+        var text = before.trimmingCharacters(in: .whitespacesAndNewlines)
+        while let last = text.unicodeScalars.last, danglingBeforeKeyword.contains(last) {
+            text.removeLast()
+            text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return (text, true)
     }
 }

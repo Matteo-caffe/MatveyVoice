@@ -8,6 +8,9 @@ import Observation
 public final class DictationController {
     /// Запись короче этого порога считается случайным нажатием; той же величиной пользуется плашка.
     public nonisolated static let minimumRecordingDuration: TimeInterval = 0.3
+    /// Голосовая отправка без удержания: как часто смотреть на хвост записи и какой длины хвост распознавать.
+    public nonisolated static let voiceSendPollInterval: TimeInterval = 0.25
+    nonisolated static let voiceSendTail: TimeInterval = 4
 
     public private(set) var state: DictationState = .idle
     /// Последний результат, только в памяти.
@@ -29,6 +32,9 @@ public final class DictationController {
     @ObservationIgnored private var messageTask: Task<Void, Never>?
     @ObservationIgnored private var isProcessing = false
     @ObservationIgnored private var pipelineTask: Task<Void, Never>?
+    @ObservationIgnored private var watchTask: Task<Void, Never>?
+    /// Идущее распознавание хвоста; итоговое распознавание ждёт его, чтобы не гонять модель параллельно.
+    @ObservationIgnored private var tailCheck: Task<Transcription?, Error>?
 
     /// - Parameters:
     ///   - postProcess: постобработка текста (`TextPostProcessor.process`), по умолчанию тождественная.
@@ -90,6 +96,7 @@ public final class DictationController {
     public func handleCancel() {
         guard state == .recording else { return }
         limitTask?.cancel()
+        watchTask?.cancel()
         _ = recorder.stop()
         isHandsFree = false
         state = .idle
@@ -129,11 +136,43 @@ public final class DictationController {
             guard !Task.isCancelled else { return }
             self?.finishRecording(hitLimit: true)
         }
+        watchTask = Task { [weak self] in await self?.watchForVoiceSend() }
     }
 
-    private func finishRecording(hitLimit: Bool = false) {
+    /// Без удержания (и в режиме переключателя) слово отправки в конце речи само заканчивает запись:
+    /// на каждой паузе после речи распознаётся хвост записи, и если он оканчивается этим словом —
+    /// запись останавливается с отправкой. Остановка клавишей работает как прежде.
+    private func watchForVoiceSend() async {
+        var armed = true  // одна проверка на паузу; снова — после того как речь возобновилась
+        while !Task.isCancelled, state == .recording {
+            await sleep(Self.voiceSendPollInterval)
+            guard !Task.isCancelled, state == .recording else { return }
+            let keyword = settings.sendKeyword
+            guard isHandsFree || settings.triggerMode == .toggle,
+                  !keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+            let tail = recorder.recentAudio(seconds: Self.voiceSendTail)
+            guard PauseDetector.endsWithPauseAfterSpeech(tail.samples) else { armed = true; continue }
+            guard armed else { continue }
+            armed = false
+            let (transcriber, language, hints) = (self.transcriber, settings.language, settings.dictionary)
+            let check = Task { try await transcriber.transcribe(tail, language: language, hints: hints) }
+            tailCheck = check
+            let result = try? await check.value
+            tailCheck = nil
+            guard !Task.isCancelled, state == .recording, let text = result?.text else { continue }
+            let processed = postProcess(text, settings.removeFillers)
+            if TextPostProcessor.extractSendCommand(processed, keyword: keyword).shouldSend {
+                return finishRecording(voiceSend: true)
+            }
+        }
+    }
+
+    /// - Parameter voiceSend: запись остановлена словом отправки — отправить, даже если итоговое
+    ///   распознавание всей записи услышит это слово чуть иначе.
+    private func finishRecording(hitLimit: Bool = false, voiceSend: Bool = false) {
         guard state == .recording else { return }
         limitTask?.cancel()
+        watchTask?.cancel()
         isHandsFree = false
         let audio = recorder.stop()
         guard audio.duration >= minimumDuration else {
@@ -148,14 +187,17 @@ public final class DictationController {
         let removeFillers = settings.removeFillers
         let sendKeyword = settings.sendKeyword
         let sendUsesCommandReturn = settings.sendUsesCommandReturn
+        let pendingCheck = tailCheck
         pipelineTask = Task { [weak self] in
+            _ = await pendingCheck?.result
             await self?.process(audio, language: language, hints: hints, removeFillers: removeFillers,
-                                 sendKeyword: sendKeyword, sendUsesCommandReturn: sendUsesCommandReturn)
+                                 sendKeyword: sendKeyword, sendUsesCommandReturn: sendUsesCommandReturn,
+                                 voiceSend: voiceSend)
         }
     }
 
     private func process(_ audio: RecordedAudio, language: Language, hints: [String], removeFillers: Bool,
-                          sendKeyword: String, sendUsesCommandReturn: Bool) async {
+                          sendKeyword: String, sendUsesCommandReturn: Bool, voiceSend: Bool) async {
         defer { isProcessing = false }
         let result: Transcription?
         do {
@@ -166,7 +208,8 @@ public final class DictationController {
         guard let result else { return showNoSpeech() }
         let processed = postProcess(result.text, removeFillers)
         guard !processed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return showNoSpeech() }
-        let (text, shouldSend) = TextPostProcessor.extractSendCommand(processed, keyword: sendKeyword)
+        let (text, keywordHeard) = TextPostProcessor.extractSendCommand(processed, keyword: sendKeyword)
+        let shouldSend = keywordHeard || voiceSend
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return showNoSpeech() }
         lastResult = text
         state = .inserting

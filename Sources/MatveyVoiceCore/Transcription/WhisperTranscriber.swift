@@ -154,11 +154,18 @@ public final class WhisperTranscriber: Transcribing, @unchecked Sendable {
         } else {
             code = language.rawValue
         }
-        let promptTokens = Self.promptTokens(for: hints, tokenizer: kit.tokenizer)
-        let results = try await kit.transcribe(
-            audioArray: audio.samples,
-            decodeOptions: Self.options(language: code, promptTokens: promptTokens)
-        )
+        let promptTokens = Self.promptTokens(for: hints, language: code, tokenizer: kit.tokenizer)
+        // First pass without temperature fallback: on noise the greedy pass returns nothing, while
+        // the fallback passes invent phrases ("Thank you.", sentences echoing the prompt). Fallback
+        // runs only when the greedy text itself is bad (a loop or very low confidence).
+        var options = Self.options(language: code, promptTokens: promptTokens)
+        let fallbackCount = options.temperatureFallbackCount
+        options.temperatureFallbackCount = 0
+        var results = try await kit.transcribe(audioArray: audio.samples, decodeOptions: options)
+        if Self.needsFallback(results.flatMap(\.segments).map { ($0.compressionRatio, $0.avgLogprob) }) {
+            options.temperatureFallbackCount = fallbackCount
+            results = try await kit.transcribe(audioArray: audio.samples, decodeOptions: options)
+        }
         let text = results.map(\.text).joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !SpeechFilter.isHallucination(text) else { return nil }
@@ -176,15 +183,43 @@ public final class WhisperTranscriber: Transcribing, @unchecked Sendable {
             skipSpecialTokens: true,
             withoutTimestamps: true,
             promptTokens: promptTokens,
+            compressionRatioThreshold: compressionRatioThreshold,
+            logProbThreshold: logProbThreshold,
             noSpeechThreshold: 0.6
         )
     }
 
-    /// Dictionary words as a decoder prompt (spelling hint). Empty dictionary gives no prompt.
-    static func promptTokens(for hints: [String], tokenizer: WhisperTokenizer?) -> [Int]? {
+    static let compressionRatioThreshold: Float = 2.4
+    static let logProbThreshold: Float = -1.0
+
+    /// A greedy result is bad when it loops (text compresses too well) or the model is unsure of it.
+    static func needsFallback(_ segments: [(compressionRatio: Float, avgLogprob: Float)]) -> Bool {
+        segments.contains { $0.compressionRatio > compressionRatioThreshold || $0.avgLogprob < logProbThreshold }
+    }
+
+    /// Whisper copies the punctuation style of its prompt. A few well-punctuated sentences in the
+    /// language of the speech (short sentences, a question, a dash) keep sentence breaks and dashes
+    /// that it otherwise drops. The sample must match the speech language: a Russian prompt over
+    /// English speech makes Whisper translate it.
+    static let punctuationSamples: [String: String] = [
+        "ru": "Привет! Как дела? Вчера был в офисе. Потом поехал домой. Москва — столица России, а работа — это жизнь. Завтра созвонимся.",
+        "en": "Hi! How are you? I was at the office yesterday. Then I went home. Paris is the capital of France, and work — well, that's life. Talk tomorrow.",
+    ]
+
+    /// Decoder prompt text: the punctuation sample, then the dictionary words (spelling hint) as a
+    /// finished sentence. A bare trailing word list made Whisper drop punctuation after those words
+    /// or skip them as already said. WhisperKit keeps the end of a long prompt, so a large
+    /// dictionary pushes out the sample, not the words.
+    static func promptText(for hints: [String], language: String) -> String {
         let words = hints.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        guard !words.isEmpty, let tokenizer else { return nil }
-        let tokens = tokenizer.encode(text: " " + words.joined(separator: ", "))
+        let parts = [punctuationSamples[language], words.isEmpty ? nil : words.joined(separator: ", ") + "."]
+        return parts.compactMap { $0 }.joined(separator: " ")
+    }
+
+    static func promptTokens(for hints: [String], language: String, tokenizer: WhisperTokenizer?) -> [Int]? {
+        let text = promptText(for: hints, language: language)
+        guard !text.isEmpty, let tokenizer else { return nil }
+        let tokens = tokenizer.encode(text: " " + text)
             .filter { $0 < tokenizer.specialTokens.specialTokenBegin }
         return tokens.isEmpty ? nil : tokens
     }

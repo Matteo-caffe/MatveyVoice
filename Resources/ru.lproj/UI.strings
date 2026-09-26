@@ -74,7 +74,7 @@
 "checklist.later" = "Закрыть";
 "settings.tab.general" = "Основное";
 "settings.tab.recognition" = "Распознавание";
-"settings.mode.hold.detail" = "Держите клавишу, пока говорите, отпустите — текст вставится.";
+"settings.mode.hold.detail" = "Держите клавишу, пока говорите, отпустите — текст вставится. Control + клавиша — запись без удержания: закончить — нажать клавишу ещё раз, отменить — Esc.";
 "settings.mode.toggle.detail" = "Нажмите один раз, чтобы начать, ещё раз — чтобы закончить.";
 "settings.model.name.small" = "Small";
 "settings.model.detail.small" = "Быстрее, чуть менее точная";

@@ -140,3 +140,78 @@ import Testing
         #expect(HotkeyClassifier.classify(kind: .keyDown, keyCode: 0, flags: 0x40, hotkey: .rightOption) == .otherKeyDown)
     }
 }
+
+@Suite struct HotkeyHandsFreeTests {
+    @Test func controlWithTriggerLatchesAndReleaseDoesNotStop() {
+        var m = HotkeyStateMachine()
+        #expect(m.handle(.triggerDownWithLatch) == .latch)
+        #expect(m.handle(.otherKeyDown) == nil)   // Control released
+        #expect(m.handle(.triggerUp) == nil)
+        #expect(m.handle(.otherKeyDown) == nil)   // typing while recording hands-free does not cancel
+    }
+
+    @Test(arguments: [HotkeyEvent.triggerDown, .triggerDownWithLatch, .triggerDownWithOthersHeld])
+    func nextTriggerPressStopsHandsFree(stop: HotkeyEvent) {
+        var m = HotkeyStateMachine()
+        _ = m.handle(.triggerDownWithLatch)
+        _ = m.handle(.triggerUp)
+        #expect(m.handle(stop) == .press)
+        #expect(m.handle(.triggerUp) == .release)
+        #expect(m.handle(.triggerDown) == .press)  // back to normal hold
+    }
+
+    @Test func controlPressedWhileHoldingLatchesInsteadOfCancelling() {
+        var m = HotkeyStateMachine()
+        #expect(m.handle(.triggerDown) == .press)
+        #expect(m.handle(.latchDown) == .latch)
+        #expect(m.handle(.triggerUp) == nil)
+        #expect(m.handle(.triggerDown) == .press)
+    }
+
+    @Test func escapeCancelsHandsFree() {
+        var m = HotkeyStateMachine()
+        _ = m.handle(.triggerDownWithLatch)
+        _ = m.handle(.triggerUp)
+        #expect(m.handle(.escapeDown) == .cancel)
+        #expect(m.handle(.triggerDown) == .press)
+    }
+
+    @Test func escapeWhileHoldingCancels() {
+        var m = HotkeyStateMachine()
+        _ = m.handle(.triggerDown)
+        #expect(m.handle(.escapeDown) == .cancel)
+        #expect(m.handle(.triggerUp) == nil)
+    }
+
+    @Test func escapeWhenIdleIsIgnored() {
+        var m = HotkeyStateMachine()
+        #expect(m.handle(.escapeDown) == nil)
+    }
+
+    @Test func classifierRecognizesControlCombos() {
+        // Fn (0x800000) pressed while left Control (0x1) is down
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 63, flags: 0x800001, hotkey: .fn) == .triggerDownWithLatch)
+        // right Control (0x2000) works too; Control + Shift is not a latch
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 63, flags: 0x802000, hotkey: .fn) == .triggerDownWithLatch)
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 63, flags: 0x800003, hotkey: .fn) == .triggerDownWithOthersHeld)
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 63, flags: 0x800001, hotkey: .fn, otherKeysHeld: true) == .triggerDownWithOthersHeld)
+        // left Control (keyCode 59) pressed while Fn is held
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 59, flags: 0x800001, hotkey: .fn) == .latchDown)
+        // Control released, or pressed without the trigger: just another key
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 59, flags: 0x800000, hotkey: .fn) == .otherKeyDown)
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 59, flags: 0x1, hotkey: .fn) == .otherKeyDown)
+        // Escape key
+        #expect(HotkeyClassifier.classify(kind: .keyDown, keyCode: 53, flags: 0, hotkey: .fn) == .escapeDown)
+        #expect(HotkeyClassifier.classify(kind: .keyDown, keyCode: 0, flags: 0, hotkey: .fn) == .otherKeyDown)
+    }
+
+    @Test func rightControlHotkeyLatchesWithLeftControl() {
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 62, flags: 0x2001, hotkey: .rightControl) == .triggerDownWithLatch)
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 59, flags: 0x2001, hotkey: .rightControl) == .latchDown)
+    }
+
+    @Test func rightOptionHotkeyLatchesWithControl() {
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 61, flags: 0x41, hotkey: .rightOption) == .triggerDownWithLatch)
+        #expect(HotkeyClassifier.classify(kind: .flagsChanged, keyCode: 62, flags: 0x2040, hotkey: .rightOption) == .latchDown)
+    }
+}

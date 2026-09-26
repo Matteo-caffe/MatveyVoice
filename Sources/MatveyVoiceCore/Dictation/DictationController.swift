@@ -12,6 +12,8 @@ public final class DictationController {
     public private(set) var state: DictationState = .idle
     /// Последний результат, только в памяти.
     public private(set) var lastResult: String?
+    /// Идёт запись без удержания (Control + клавиша): отпускание её не останавливает, следующее нажатие — да.
+    public private(set) var isHandsFree = false
 
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private let recorder: any AudioRecording
@@ -58,7 +60,7 @@ public final class DictationController {
     public func handlePress() {
         switch state {
         case .recording:
-            if settings.triggerMode == .toggle { finishRecording() }
+            if settings.triggerMode == .toggle || isHandsFree { finishRecording() }
         case .transcribing, .inserting:
             return
         case .idle, .message:
@@ -67,14 +69,29 @@ public final class DictationController {
     }
 
     public func handleRelease() {
-        guard settings.triggerMode == .hold, state == .recording else { return }
+        guard settings.triggerMode == .hold, state == .recording, !isHandsFree else { return }
         finishRecording()
+    }
+
+    /// Начинает запись без удержания или переводит в неё идущую.
+    public func handleLatch() {
+        switch state {
+        case .recording:
+            isHandsFree = true
+        case .transcribing, .inserting:
+            return
+        case .idle, .message:
+            guard !isProcessing else { return }
+            beginRecording()
+            isHandsFree = state == .recording
+        }
     }
 
     public func handleCancel() {
         guard state == .recording else { return }
         limitTask?.cancel()
         _ = recorder.stop()
+        isHandsFree = false
         state = .idle
     }
 
@@ -117,6 +134,7 @@ public final class DictationController {
     private func finishRecording(hitLimit: Bool = false) {
         guard state == .recording else { return }
         limitTask?.cancel()
+        isHandsFree = false
         let audio = recorder.stop()
         guard audio.duration >= minimumDuration else {
             state = .idle

@@ -5,18 +5,34 @@ public enum HotkeyEvent: Sendable, Equatable {
     case triggerDown
     /// Триггер нажат, но другие клавиши или модификаторы уже удерживались: это не диктовка.
     case triggerDownWithOthersHeld
+    /// Триггер нажат, пока удерживается только Control: запись без удержания.
+    case triggerDownWithLatch
     case triggerUp
+    /// Control нажат, пока удерживается только триггер: идущая запись продолжается без удержания.
+    case latchDown
+    case escapeDown
     /// Any other key or modifier changed while the trigger might be held.
     case otherKeyDown
 }
 
 public enum HotkeyOutput: Sendable, Equatable {
-    case press, release, cancel
+    /// `latch` — начать запись без удержания или перевести в него идущую.
+    case press, release, cancel, latch
 }
 
-/// Pure logic: a combo with any other key turns the release into a cancel.
+/// Pure logic: a combo with any other key turns the release into a cancel. Control + trigger
+/// latches the recording: releasing the keys no longer stops it, the next trigger press does,
+/// Escape cancels it.
 public struct HotkeyStateMachine: Sendable {
-    private enum Phase { case idle, held, cancelled }
+    private enum Phase {
+        case idle, held, cancelled
+        /// Latched, the keys are still down.
+        case latchedHeld
+        /// Latched, keys released: recording without holding anything.
+        case handsFree
+        /// The press that stopped hands-free recording; waits for its release.
+        case stopping
+    }
     private var phase: Phase = .idle
 
     public init() {}
@@ -26,18 +42,38 @@ public struct HotkeyStateMachine: Sendable {
         case (.idle, .triggerDown):
             phase = .held
             return .press
+        case (.idle, .triggerDownWithLatch):
+            phase = .latchedHeld
+            return .latch
         case (.idle, .triggerDownWithOthersHeld):
             phase = .cancelled
             return nil
         case (.held, .triggerUp):
             phase = .idle
             return .release
-        case (.held, .otherKeyDown):
+        case (.held, .latchDown):
+            phase = .latchedHeld
+            return .latch
+        case (.held, .otherKeyDown), (.held, .escapeDown), (.latchedHeld, .escapeDown):
             phase = .cancelled
             return .cancel
         case (.cancelled, .triggerUp):
             phase = .idle
             return nil
+        case (.latchedHeld, .triggerUp):
+            phase = .handsFree
+            return nil
+        case (.handsFree, .triggerDown), (.handsFree, .triggerDownWithLatch), (.handsFree, .triggerDownWithOthersHeld):
+            phase = .stopping
+            return .press
+        case (.handsFree, .escapeDown):
+            phase = .idle
+            return .cancel
+        // If the recording had already ended (time limit), the stopping press started a new
+        // hold recording, and this release ends it.
+        case (.stopping, .triggerUp):
+            phase = .idle
+            return .release
         default:
             return nil
         }
@@ -76,6 +112,10 @@ public enum HotkeyClassifier {
     static let deviceRightCommand: UInt64 = 0x10
     static let deviceRightControl: UInt64 = 0x2000
     static let secondaryFn: UInt64 = 0x800000
+    /// Левый и правый Control.
+    static let deviceControls: UInt64 = 0x1 | 0x2000
+    static let controlKeyCodes: Set<Int64> = [59, 62]
+    static let escapeKeyCode: Int64 = 53
     /// Все прочие аппаратные биты модификаторов: левый/правый shift, control, option, command.
     static let allDeviceModifiers: UInt64 = 0x2 | 0x4 | 0x1 | 0x2000 | 0x20 | 0x40 | 0x8 | 0x10
 
@@ -102,19 +142,32 @@ public enum HotkeyClassifier {
         }
     }
 
+    /// Modifiers other than the trigger itself.
+    static func others(for hotkey: Hotkey) -> UInt64 {
+        hotkey == .fn ? allDeviceModifiers : (allDeviceModifiers | secondaryFn) & ~mask(for: hotkey)
+    }
+
+    /// Control bits that latch this trigger (for right Control — only the left one).
+    static func latchMask(for hotkey: Hotkey) -> UInt64 {
+        deviceControls & ~mask(for: hotkey)
+    }
+
     /// - Parameter otherKeysHeld: удерживается ли обычная (не модификатор) клавиша.
     public static func classify(kind: Kind, keyCode: Int64, flags: UInt64, hotkey: Hotkey,
                                 otherKeysHeld: Bool = false) -> HotkeyEvent? {
+        let held = flags & others(for: hotkey)
+        let onlyControlHeld = held != 0 && (held & ~latchMask(for: hotkey)) == 0 && !otherKeysHeld
         switch kind {
         case .keyDown:
-            return .otherKeyDown
+            return keyCode == escapeKeyCode ? .escapeDown : .otherKeyDown
         case .flagsChanged:
+            let triggerDown = (flags & mask(for: hotkey)) != 0
             if keyCode == Self.keyCode(for: hotkey) {
-                guard (flags & mask(for: hotkey)) != 0 else { return .triggerUp }
-                var others = (allDeviceModifiers | secondaryFn) & ~mask(for: hotkey)
-                if hotkey == .fn { others = allDeviceModifiers }
-                return (flags & others) != 0 || otherKeysHeld ? .triggerDownWithOthersHeld : .triggerDown
+                guard triggerDown else { return .triggerUp }
+                if held == 0 && !otherKeysHeld { return .triggerDown }
+                return onlyControlHeld ? .triggerDownWithLatch : .triggerDownWithOthersHeld
             }
+            if controlKeyCodes.contains(keyCode), triggerDown, onlyControlHeld { return .latchDown }
             return .otherKeyDown
         case .other:
             return nil

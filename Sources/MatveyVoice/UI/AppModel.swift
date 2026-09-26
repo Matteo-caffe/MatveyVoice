@@ -124,14 +124,23 @@ final class AppModel {
             hotkey: settings.hotkey,
             onPress: { [weak self] in MainActor.assumeIsolated { self?.hotkeyPressed() } },
             onRelease: { [weak self] in MainActor.assumeIsolated { self?.controller.handleRelease() } },
-            onCancel: { [weak self] in MainActor.assumeIsolated { self?.controller.handleCancel() } }
+            onCancel: { [weak self] in MainActor.assumeIsolated { self?.controller.handleCancel() } },
+            onLatch: { [weak self] in MainActor.assumeIsolated { self?.hotkeyLatched() } }
         )
         hotkeyAvailable = monitor.isAvailable
     }
 
     private func hotkeyPressed() {
-        // Проверка микрофона относится только к началу записи: второе нажатие в режиме
-        // переключателя должно дойти до контроллера и остановить идущую запись.
+        if microphoneAllowsStart() { controller.handlePress() }
+    }
+
+    private func hotkeyLatched() {
+        if microphoneAllowsStart() { controller.handleLatch() }
+    }
+
+    /// Проверка микрофона относится только к началу записи: второе нажатие в режиме
+    /// переключателя или без удержания должно дойти до контроллера и остановить идущую запись.
+    private func microphoneAllowsStart() -> Bool {
         var starting = true
         if case .recording = controller.state { starting = false }
         if case .transcribing = controller.state { starting = false }
@@ -140,9 +149,9 @@ final class AppModel {
         if starting, mic != .granted {
             if mic == .notDetermined { Task { [permissions] in await permissions.request(.microphone) } }
             overlay?.flash(ui("overlay.noMicrophone"))
-            return
+            return false
         }
-        controller.handlePress()
+        return true
     }
 
     // MARK: настройки → поведение

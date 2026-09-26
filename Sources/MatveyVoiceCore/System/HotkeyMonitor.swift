@@ -12,6 +12,7 @@ public final class HotkeyMonitor: @unchecked Sendable {
     private var onPress: (() -> Void)?
     private var onRelease: (() -> Void)?
     private var onCancel: (() -> Void)?
+    private var onLatch: (() -> Void)?
     private var heldKeys = HeldKeys()
 
     public init() {}
@@ -28,13 +29,15 @@ public final class HotkeyMonitor: @unchecked Sendable {
     public func start(hotkey: Hotkey,
                       onPress: @escaping () -> Void,
                       onRelease: @escaping () -> Void,
-                      onCancel: @escaping () -> Void) {
+                      onCancel: @escaping () -> Void,
+                      onLatch: @escaping () -> Void) {
         stop()
         lock.lock()
         self.hotkey = hotkey
         self.onPress = onPress
         self.onRelease = onRelease
         self.onCancel = onCancel
+        self.onLatch = onLatch
         machine = HotkeyStateMachine()
         heldKeys.reset()
         lock.unlock()
@@ -64,7 +67,7 @@ public final class HotkeyMonitor: @unchecked Sendable {
         lock.lock()
         let tap = self.tap, source = self.source
         self.tap = nil; self.source = nil
-        onPress = nil; onRelease = nil; onCancel = nil
+        onPress = nil; onRelease = nil; onCancel = nil; onLatch = nil
         lock.unlock()
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         if let tap { CGEvent.tapEnable(tap: tap, enable: false); CFMachPortInvalidate(tap) }
@@ -98,7 +101,7 @@ public final class HotkeyMonitor: @unchecked Sendable {
         default: break
         }
         let output: HotkeyOutput?
-        let (press, release, cancel) = (onPress, onRelease, onCancel)
+        let (press, release, cancel, latch) = (onPress, onRelease, onCancel, onLatch)
         if let ev = HotkeyClassifier.classify(kind: kind,
                                               keyCode: code,
                                               flags: flags, hotkey: hotkey,
@@ -110,6 +113,7 @@ public final class HotkeyMonitor: @unchecked Sendable {
         case .press: press?()
         case .release: release?()
         case .cancel: cancel?()
+        case .latch: latch?()
         case nil: break
         }
     }

@@ -268,6 +268,49 @@ private struct Rig {
         #expect(r.recorder.startCalls == 1)
     }
 
+    @Test func latchStartsHandsFreeRecordingThatIgnoresRelease() async {
+        let r = Rig()
+        r.controller.handleLatch()
+        #expect(r.controller.state == .recording)
+        #expect(r.controller.isHandsFree)
+        r.controller.handleRelease()
+        #expect(r.controller.state == .recording)
+        r.controller.handlePress()
+        #expect(r.controller.state == .transcribing)
+        #expect(!r.controller.isHandsFree)
+        await r.controller.waitForCompletion()
+        #expect(r.inserter.inserted.count == 1)
+    }
+
+    @Test func latchDuringHoldKeepsTheSameRecording() {
+        let r = Rig()
+        r.controller.handlePress()
+        r.controller.handleLatch()
+        r.controller.handleRelease()
+        #expect(r.controller.state == .recording)
+        #expect(r.recorder.startCalls == 1)
+    }
+
+    @Test func cancelEndsHandsFreeRecording() {
+        let r = Rig()
+        r.controller.handleLatch()
+        r.controller.handleCancel()
+        #expect(r.controller.state == .idle)
+        #expect(!r.controller.isHandsFree)
+        r.controller.handlePress()
+        r.controller.handleRelease()   // the next recording is a plain hold again
+        #expect(r.controller.state != .recording)
+    }
+
+    @Test func latchWhileTranscribingIsIgnored() async {
+        let r = Rig()
+        r.controller.handlePress(); r.controller.handleRelease()
+        r.controller.handleLatch()
+        #expect(r.controller.state == .transcribing)
+        #expect(r.recorder.startCalls == 1)
+        await r.controller.waitForCompletion()
+    }
+
     @Test func recordingHittingLimitShowsMessageAndIsStillTranscribed() async {
         let r = Rig()
         r.transcriber.blocking = true

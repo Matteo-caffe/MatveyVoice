@@ -74,7 +74,7 @@
 "checklist.later" = "Close";
 "settings.tab.general" = "General";
 "settings.tab.recognition" = "Recognition";
-"settings.mode.hold.detail" = "Hold the key while you speak, release it to insert the text.";
+"settings.mode.hold.detail" = "Hold the key while you speak, release it to insert the text. Control + key records without holding: press the key again to finish, Esc to cancel.";
 "settings.mode.toggle.detail" = "Press once to start, press again to stop.";
 "settings.model.name.small" = "Small";
 "settings.model.detail.small" = "Faster, a little less accurate";

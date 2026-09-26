@@ -63,9 +63,10 @@ Because the app is ad-hoc signed, macOS treats every rebuild as a new app: after
 ## Using it
 
 - Default trigger: hold the **right Option** key, speak, release. Right Cmd, right Ctrl or Fn can be chosen in Settings.
-- Mode "toggle" (press once to start, again to stop) is available in Settings.
+- **Control + trigger** records without holding: press the trigger again to finish, Esc to cancel. Mode "toggle" (every press starts or stops) is available in Settings.
 - Pressing the trigger together with another key cancels the recording.
-- The text is pasted through the clipboard, and your previous clipboard contents are restored afterwards. Enter is never pressed for you.
+- **Voice send**: set a word such as "send" in Settings. Say it at the end and the text is inserted and Return is pressed; when recording without holding, the recording also stops by itself after the word and a pause.
+- The text is pasted through the clipboard, and your previous clipboard contents are restored afterwards. Return is pressed only for voice send.
 - Language: automatic, Russian or English.
 
 ## Models

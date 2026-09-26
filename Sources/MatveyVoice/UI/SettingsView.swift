@@ -275,7 +275,7 @@ struct SettingsView: View {
                 CardDivider()
                 CardRow { modelStatus }
             }
-            Block {
+            Block(footer: ui("settings.removeFillers.note")) {
                 toggleRow(title: ui("settings.removeFillers"), isOn: $settings.removeFillers)
             }
         }

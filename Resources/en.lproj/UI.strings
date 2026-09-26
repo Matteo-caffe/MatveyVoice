@@ -55,6 +55,7 @@
 "settings.dictionary.add" = "Add";
 "settings.dictionary.remove" = "Remove word";
 "settings.removeFillers" = "Remove filler words";
+"settings.removeFillers.note" = "Removes “uh”, “um”, “like”, “you know”, “I mean”, sentences that are pure filler and stutters like “I I think”. Meaningful uses stay: “I like it”, “so what?”.";
 "settings.sendKeyword" = "Voice send";
 "settings.sendKeyword.placeholder" = "Word or phrase (e.g. “send”)";
 "settings.sendKeyword.note" = "Say this word at the end of dictation to insert the text and send it right away. When recording without holding the key, it also stops the recording once you say the word and pause. Turn on ⌘+Return for apps that send with that shortcut. Leave empty to turn this off.";

@@ -12,14 +12,14 @@ import Testing
     }
 
     @Test func leavesOrdinaryWordsAndWordParts() {
-        let text = "Ну, like, это эмоции, umbrella и uhura, эхо"
+        let text = "Это эмоции, umbrella и uhura, эхо"
         #expect(TextPostProcessor.process(text, removeFillers: true) == text)
     }
 
     @Test func cleansCommasAroundRemovedFiller() {
-        #expect(TextPostProcessor.process("Ну, э, я думаю", removeFillers: true) == "Ну, я думаю")
+        #expect(TextPostProcessor.process("Ну, э, я думаю", removeFillers: true) == "Я думаю")
         #expect(TextPostProcessor.process("Я думаю, эм.", removeFillers: true) == "Я думаю.")
-        #expect(TextPostProcessor.process("Well, um, yes", removeFillers: true) == "Well, yes")
+        #expect(TextPostProcessor.process("Well, um, yes", removeFillers: true) == "Yes")
     }
 
     @Test func fillerAtStartCapitalizesNextWord() {
@@ -46,6 +46,63 @@ import Testing
     @Test func nextWordAfterSentenceEndIsCapitalized() {
         #expect(TextPostProcessor.process("Привет. Э, как дела", removeFillers: true) == "Привет. Как дела")
         #expect(TextPostProcessor.process("Done! Um so what next?", removeFillers: true) == "Done! So what next?")
+    }
+
+    // MARK: слова-паразиты и вода
+
+    private func clean(_ text: String) -> String { TextPostProcessor.process(text, removeFillers: true) }
+
+    @Test func fillerSetOffByCommasIsRemovedAnywhere() {
+        #expect(clean("Ну, я думаю, что это работает.") == "Я думаю, что это работает.")
+        #expect(clean("Короче, надо переделать интерфейс.") == "Надо переделать интерфейс.")
+        #expect(clean("Я пришёл, типа, а там никого.") == "Я пришёл, а там никого.")
+        #expect(clean("Это, как бы, не совсем то.") == "Это не совсем то.")
+        #expect(clean("Мы всё сделали, в общем.") == "Мы всё сделали.")
+        #expect(clean("Интерфейс перегружен, вот.") == "Интерфейс перегружен.")
+        #expect(clean("Ну, короче, в общем, завтра созвонимся.") == "Завтра созвонимся.")
+        #expect(clean("It is, like, really slow, you know.") == "It is really slow.")
+        #expect(clean("Well, I mean, it works.") == "It works.")
+    }
+
+    @Test func typicalLeadingFillerIsRemovedWithoutComma() {
+        #expect(clean("Ну я думаю, что да.") == "Я думаю, что да.")
+        #expect(clean("Короче я сегодня допишу.") == "Я сегодня допишу.")
+        #expect(clean("Привет. Так вот я про проект.") == "Привет. Я про проект.")
+        #expect(clean("Вот так вот сегодня такие изменения.") == "Сегодня такие изменения.")
+    }
+
+    @Test func sentencesOfPureFillerAreDropped() {
+        #expect(clean("Тестировал в заметках. Вот так вот. Сегодня такие изменения.") == "Тестировал в заметках. Сегодня такие изменения.")
+        #expect(clean("Всё готово. Ну вот. Как-то так.") == "Всё готово.")
+        #expect(clean("Работает! Такие дела") == "Работает!")
+        #expect(clean("Сделал. Ну типа того.") == "Сделал.")
+        #expect(clean("Вот так вот.") == "")
+    }
+
+    @Test func meaningfulUsesAreKept() {
+        for text in ["Вот почему я пришёл.", "Вот он, этот файл.", "Это значит, что всё работает.",
+                     "Сделай текст короче.", "В общем чате написали.", "Как бы не опоздать.",
+                     "Нужен другой тип данных.", "Ну и что?", "So what do we do?", "I like it.",
+                     "Я сделал это так, как ты сказал."] {
+            #expect(clean(text) == text)
+        }
+    }
+
+    @Test func stutteredWordsAndPhrasesAreCollapsed() {
+        #expect(clean("Я я думаю, что это что это работает.") == "Я думаю, что это работает.")
+        #expect(clean("Мы мы пойдём, мы пойдём завтра.") == "Мы пойдём завтра.")
+        #expect(clean("It is is fine.") == "It is fine.")
+    }
+
+    @Test func intentionalRepetitionsAreKept() {
+        for text in ["Да да, конечно.", "Нет нет, не так.", "Очень очень быстро.", "Hey hey, look."] {
+            #expect(clean(text) == text)
+        }
+    }
+
+    @Test func userDictationLosesOnlyTheWater() {
+        let text = "Взял что-то из Aqua Voice, то есть проверял в заметках, тестировал. Также использовал терминал. Вот так вот. Сегодня такие изменения."
+        #expect(clean(text) == "Взял что-то из Aqua Voice, то есть проверял в заметках, тестировал. Также использовал терминал. Сегодня такие изменения.")
     }
 
     @Test func extractSendCommandStripsTrailingKeywordAndKeepsSentencePunctuation() {

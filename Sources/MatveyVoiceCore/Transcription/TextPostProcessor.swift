@@ -10,19 +10,8 @@ public enum TextPostProcessor {
 
     public static func process(_ text: String, removeFillers: Bool) -> String {
         guard removeFillers else { return text }
-        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let full = NSRange(result.startIndex..., in: result)
-        guard fillerPattern.firstMatch(in: result, range: full) != nil else { return result }
-
-        let mutable = NSMutableString(string: result)
-        for match in fillerPattern.matches(in: result, range: full).reversed() {
-            let loc = match.range.location
-            let before = mutable.substring(to: loc).trimmingCharacters(in: .whitespacesAndNewlines)
-            let atSentenceStart = before.isEmpty || ".!?…".contains(before.last!)
-            mutable.deleteCharacters(in: match.range)
-            if atSentenceStart { capitalizeNextLetter(in: mutable, from: loc) }
-        }
-        result = mutable as String
+        var result = removeHesitations(text.trimmingCharacters(in: .whitespacesAndNewlines))
+        result = WaterFilter.clean(result)
 
         result = replace(#"\s+"#, in: result, with: " ")
         result = replace(#",(\s*,)+"#, in: result, with: ",")     // ", ," -> ","
@@ -33,6 +22,21 @@ public enum TextPostProcessor {
 
         if result.rangeOfCharacter(from: .alphanumerics) == nil { return "" }
         return result
+    }
+
+    /// Standalone э/эм/uh/um; the next word is capitalized when one opened a sentence.
+    private static func removeHesitations(_ text: String) -> String {
+        let full = NSRange(text.startIndex..., in: text)
+        guard fillerPattern.firstMatch(in: text, range: full) != nil else { return text }
+        let mutable = NSMutableString(string: text)
+        for match in fillerPattern.matches(in: text, range: full).reversed() {
+            let loc = match.range.location
+            let before = mutable.substring(to: loc).trimmingCharacters(in: .whitespacesAndNewlines)
+            let atSentenceStart = before.isEmpty || ".!?…".contains(before.last!)
+            mutable.deleteCharacters(in: match.range)
+            if atSentenceStart { capitalizeNextLetter(in: mutable, from: loc) }
+        }
+        return mutable as String
     }
 
     private static func capitalizeNextLetter(in text: NSMutableString, from location: Int) {
